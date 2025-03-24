@@ -1,0 +1,137 @@
+/* Vuetify styles import */
+@import 'vuetify/styles';
+
+/* Global styles */
+html {
+  font-family: 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #fafafa;
+}
+
+/* Homepage style enhancements */
+.home-title {
+  line-height: 1.3;
+}
+
+.v-sheet.v-sheet--density-default {
+  width: 100%;
+}
+
+.v-container {
+  max-width: 1200px;
+}
+
+/* Footer style optimization */
+.v-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 4px 0 !important;
+  min-height: auto !important;
+}
+
+.v-footer .v-btn:hover {
+  opacity: 0.8;
+}
+
+/* Navigation and content area styles */
+.v-app-bar {
+  height: 64px !important;
+}
+
+.v-main {
+  padding-bottom: 16px;
+}
+
+/* Card style optimization */
+.v-card {
+  transition: box-shadow 0.2s ease;
+}
+
+.v-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Responsive design for different screen sizes */
+/* Small devices (phones, under 600px) */
+@media (max-width: 600px) {
+  .v-container {
+    padding: 12px !important;
+  }
+  
+  .text-h4 {
+    font-size: 1.5rem !important;
+  }
+  
+  .v-card-title {
+    font-size: 1.25rem !important;
+  }
+  
+  .v-footer .v-container {
+    padding: 4px 12px !important;
+  }
+}
+
+/* Medium devices (tablets, 600px to 960px) */
+@media (min-width: 600px) and (max-width: 960px) {
+  .v-footer .v-container {
+    padding: 4px 16px !important;
+  }
+}
+
+/* Large devices (laptops/desktops, above 960px) */
+@media (min-width: 960px) {
+  .v-footer .v-container {
+    padding: 4px 24px !important;
+  }
+}
+
+/* Custom theme override */
+.v-application {
+  /* Theme colors can be overridden here */
+}
+
+/* Custom animation */
+.page-transition-enter-active,
+.page-transition-leave-active {
+  transition: all 0.3s ease;
+}
+
+.page-transition-enter-from,
+.page-transition-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+/* Global text color and background color adjustment */
+.text-primary-custom {
+  color: #6200ea !important;
+}
+
+.bg-primary-light {
+  background-color: #f5f0ff !important;
+}
+
+/* Card style enhancement */
+.custom-card {
+  transition: all 0.3s ease;
+}
+
+.custom-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Form style enhancement */
+.custom-input {
+  border-radius: 8px !important;
+}
+
+.custom-input:focus {
+  border-color: #6200ea !important;
+}
