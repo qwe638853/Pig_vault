@@ -3,6 +3,11 @@ import { ref, onMounted, provide } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { ethers } from 'ethers'
+import { useMotion } from '@vueuse/motion'
+import anime from 'animejs'
+import { useMouse, useParallax } from '@vueuse/core'
+import { useDark, useToggle } from '@vueuse/core'
+import { useScroll } from '@vueuse/core'
 
 const router = useRouter()
 const display = useDisplay()
@@ -12,11 +17,135 @@ const address = ref('')
 const showHero = ref(true)
 const isMobile = display.mobile
 const pigAnimation = ref('idle')
+const isDark = useDark()
+const toggleDark = useToggle(isDark)
 
-// Provide reactive states to all components
-provide('isConnected', isConnected)
-provide('address', address)
-provide('isMobile', isMobile)
+// Parallax effect
+const target = ref(null)
+const { tilt, roll } = useParallax(target)
+
+// Scroll reveal
+const { y } = useScroll(window)
+const isVisible = ref(false)
+
+// Mouse trail effect
+const mouse = useMouse()
+const particles = ref([])
+const MAX_PARTICLES = 50
+
+const createParticle = (x, y) => {
+  return {
+    x,
+    y,
+    size: Math.random() * 3 + 1,
+    speedX: (Math.random() - 0.5) * 2,
+    speedY: (Math.random() - 0.5) * 2,
+    life: 1
+  }
+}
+
+const updateParticles = () => {
+  particles.value = particles.value
+    .map(p => ({
+      ...p,
+      x: p.x + p.speedX,
+      y: p.y + p.speedY,
+      life: p.life - 0.01
+    }))
+    .filter(p => p.life > 0)
+
+  if (particles.value.length < MAX_PARTICLES) {
+    particles.value.push(
+      createParticle(mouse.x.value, mouse.y.value)
+    )
+  }
+
+  requestAnimationFrame(updateParticles)
+}
+
+// Typing effect
+const text = "Your Smart Piggy Bank for Web3"
+const displayText = ref('')
+let currentIndex = 0
+
+const typeText = () => {
+  if (currentIndex < text.length) {
+    displayText.value += text[currentIndex]
+    currentIndex++
+    setTimeout(typeText, 100)
+  }
+}
+
+// 添加標題動畫相關的響應式數據
+const titleVisible = ref(false)
+
+onMounted(() => {
+  // Initialize Vanta.js background
+  if (window.VANTA) {
+    window.VANTA.NET({
+      el: "#vanta-bg",
+      mouseControls: true,
+      touchControls: true,
+      gyroControls: false,
+      minHeight: 200.00,
+      minWidth: 200.00,
+      scale: 1.00,
+      scaleMobile: 1.00,
+      color: 0x00ffe0,
+      backgroundColor: 0x0a0a0a,
+      points: 15,
+      maxDistance: 25.00,
+      spacing: 18.00,
+      showDots: false,
+      blur: 1
+    })
+  }
+
+  // Start particle animation
+  updateParticles()
+
+  // Start typing animation
+  typeText()
+
+  // Initialize coin animation
+  anime({
+    targets: '.coin',
+    translateY: function() {
+      return anime.random(-30, 30)
+    },
+    translateX: function() {
+      return anime.random(-30, 30)
+    },
+    rotate: function() {
+      return anime.random(-360, 360)
+    },
+    scale: function() {
+      return anime.random(0.8, 1.2)
+    },
+    duration: function() {
+      return anime.random(1000, 3000)
+    },
+    delay: function() {
+      return anime.random(0, 1000)
+    },
+    loop: true,
+    easing: 'easeInOutQuad'
+  })
+
+  // 監聽來自 WelcomeScreen 的連接錢包事件
+  window.addEventListener('connect-wallet', () => {
+    connectWallet()
+  })
+  
+  // 觸發標題動畫
+  setTimeout(() => {
+    titleVisible.value = true
+  }, 500)
+  
+  return () => {
+    window.removeEventListener('connect-wallet', connectWallet)
+  }
+})
 
 const connectWallet = async () => {
   try {
@@ -47,6 +176,15 @@ const connectWallet = async () => {
     isConnected.value = true
     address.value = accounts[0]
     showHero.value = false
+    
+    // 觸發動畫效果
+    anime({
+      targets: '.pig-icon',
+      scale: [1, 1.2, 1],
+      rotate: [0, 10, 0],
+      duration: 1000,
+      easing: 'easeInOutQuad'
+    })
   } catch (error) {
     console.error('連接錢包失敗:', error)
     alert('連接錢包失敗: ' + error.message)
@@ -55,30 +193,13 @@ const connectWallet = async () => {
 
 const disconnectWallet = async () => {
   try {
-    // 清除錢包連接狀態
     isConnected.value = false
     address.value = null
     showHero.value = true
-    
-
   } catch (error) {
     console.error('斷開錢包失敗:', error)
   }
 }
-
-onMounted(() => {
-
-  
-  // 監聽來自 WelcomeScreen 的連接錢包事件
-  window.addEventListener('connect-wallet', () => {
-    connectWallet()
-  })
-  
-  return () => {
-    // 在組件卸載時移除事件監聽器
-    window.removeEventListener('connect-wallet', connectWallet)
-  }
-})
 
 const items = [
   { title: 'Home', icon: 'mdi-home', to: '/' },
@@ -88,492 +209,716 @@ const items = [
 </script>
 
 <template>
-  <v-app class="app-container">
-    <!-- Modern glassmorphic navigation bar -->
-    <v-app-bar flat class="glass-nav">
-      <template v-slot:prepend>
-        <v-app-bar-nav-icon @click="drawer = !drawer" class="d-md-none"></v-app-bar-nav-icon>
-        <div class="d-flex align-center">
-          <div class="pig-icon-wrapper">
-            <v-icon size="large" color="primary" class="mr-2 pig-icon" :class="pigAnimation">mdi-pig-variant</v-icon>
-          </div>
-          <v-app-bar-title class="text-primary font-weight-bold">Pig Vault</v-app-bar-title>
-        </div>
-      </template>
-      
-      <div class="d-none d-md-flex ml-4">
-        <v-btn 
-          v-for="item in items" 
-          :key="item.title" 
-          :to="item.to" 
-          variant="text" 
-          class="mx-1 nav-btn"
-          :prepend-icon="item.icon"
-        >
-          {{ item.title }}
-        </v-btn>
+  <v-app class="app-container" ref="target">
+    <div id="vanta-bg" class="vanta-background"></div>
+    
+    <!-- Particle effect -->
+    <div class="particles">
+      <div v-for="(particle, index) in particles" 
+           :key="index" 
+           class="particle"
+           :style="{
+             left: particle.x + 'px',
+             top: particle.y + 'px',
+             width: particle.size + 'px',
+             height: particle.size + 'px',
+             opacity: particle.life
+           }">
       </div>
-      
-      <v-spacer></v-spacer>
-      
-      <div>
-        <v-btn 
-          v-if="!isConnected"
-          color="primary" 
-          @click="connectWallet"
-          prepend-icon="mdi-wallet"
-          class="connect-btn"
-        >
-          Connect Wallet
-        </v-btn>
+    </div>
 
-        <template v-else>
-          <v-chip color="success" class="mr-2 wallet-chip">
-            <template v-slot:prepend>
-              <v-icon>mdi-check-circle</v-icon>
-            </template>
-            <span class="d-none d-sm-flex">{{ address.substring(0, 6) }}...{{ address.substring(address.length - 4) }}</span>
-            <span class="d-flex d-sm-none">{{ address.substring(0, 4) }}...{{ address.substring(address.length - 2) }}</span>
-          </v-chip>
-          <v-btn 
-            icon="mdi-logout"
-            color="error" 
-            variant="text"
-            @click="disconnectWallet"
-          ></v-btn>
-        </template>
-      </div>
-    </v-app-bar>
-    
-    <!-- Hero Section -->
-    <v-fade-transition>
-      <div v-if="showHero" class="hero-section">
-        <div class="hero-content">
-          <div class="pig-container">
-            <div class="pig-body">
-              <div class="pig-face">
-                <div class="pig-eye left"></div>
-                <div class="pig-eye right"></div>
-                <div class="pig-nose"></div>
-                <div class="pig-mouth"></div>
+    <!-- Main Layout Container -->
+    <div class="layout-wrapper">
+      <div class="layout-container max-w-screen-xl mx-auto px-6">
+        <!-- Navigation -->
+        <v-app-bar flat class="glass-nav px-6">
+          <div class="d-flex align-center">
+            <v-app-bar-title class="brand-title">
+              <div class="brand-wrapper">
+                <span class="brand-text">Pig</span>
+                <span class="brand-highlight">Vault</span>
+                <div class="brand-underline"></div>
               </div>
-              <div class="pig-ear left"></div>
-              <div class="pig-ear right"></div>
-            </div>
-            <div class="coin-container">
-              <div class="coin" v-for="n in 5" :key="n"></div>
+            </v-app-bar-title>
+          </div>
+          
+          <v-spacer></v-spacer>
+          
+          <div class="d-none d-md-flex align-center gap-6">
+            <v-btn 
+              v-for="item in items" 
+              :key="item.title" 
+              :to="item.to" 
+              variant="text" 
+              class="nav-btn glow-hover"
+            >
+              {{ item.title }}
+            </v-btn>
+            
+            <v-btn 
+              v-if="!isConnected"
+              class="connect-btn glow-effect"
+              @click="connectWallet"
+            >
+              <v-icon left class="mr-2">mdi-wallet</v-icon>
+              Connect Wallet
+            </v-btn>
+
+            <template v-else>
+              <div class="wallet-display glass-card">
+                <v-icon left class="mr-2" color="var(--neon-primary)">mdi-wallet-outline</v-icon>
+                {{ address.substring(0, 6) }}...{{ address.substring(address.length - 4) }}
+              </div>
+            </template>
+          </div>
+        </v-app-bar>
+
+        <!-- Hero Section -->
+        <v-fade-transition>
+          <div v-if="showHero" class="hero-section min-h-screen flex items-center justify-center" 
+               :style="{
+                 '--tilt-x': tilt + 'deg',
+                 '--tilt-y': roll + 'deg'
+               }">
+            <div class="hero-content" 
+                 v-motion
+                 :initial="{ opacity: 0, y: 100 }"
+                 :enter="{ opacity: 1, y: 0 }">
+              
+              <!-- Animated Pig and Coins -->
+              <div class="relative mb-16">
+                <div class="pig-container">
+                  <lottie-player
+                    src="@/assets/pig-animation.json"
+                    background="transparent"
+                    speed="1"
+                    class="pig-animation"
+                    loop
+                    autoplay
+                  ></lottie-player>
+                </div>
+                
+                <!-- Coin shower effect -->
+                <div class="coins-shower">
+                  <template v-for="n in 12" :key="n">
+                    <div class="coin-wrapper"
+                         :style="{
+                           '--delay': `${n * 0.2}s`,
+                           '--x-pos': `${(n % 3 - 1) * 30}px`
+                         }">
+                      <div class="coin"></div>
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <!-- Hero Text -->
+              <div class="text-center space-y-8">
+                <h1 class="hero-title">
+                  <span class="title-word">Welcome to</span>
+                  <span class="title-word highlight">Pig Vault</span>
+                </h1>
+                
+                <p class="hero-subtitle neon-text">{{ displayText }}</p>
+                
+                <v-btn
+                  class="connect-btn-hero glow-effect mt-12"
+                  @click="connectWallet"
+                  v-motion
+                  :initial="{ scale: 0.8, opacity: 0 }"
+                  :enter="{ scale: 1, opacity: 1 }"
+                >
+                  <v-icon left class="mr-2">mdi-wallet</v-icon>
+                  CONNECT WALLET
+                </v-btn>
+              </div>
             </div>
           </div>
-          <h1 class="text-h1 font-weight-bold mb-4">Welcome to Pig Vault</h1>
-          <p class="text-h5 mb-8">Your Smart Piggy Bank for Web3</p>
-          <v-btn
-            color="primary"
-            size="x-large"
-            class="connect-btn-hero"
-            @click="connectWallet"
-            prepend-icon="mdi-wallet"
-          >
-            Connect Your Wallet
-          </v-btn>
-        </div>
-        <div class="hero-background">
-          <div class="gradient-sphere"></div>
-          <div class="gradient-sphere"></div>
-          <div class="gradient-sphere"></div>
-          <div class="floating-coins">
-            <div class="coin" v-for="n in 10" :key="n"></div>
-          </div>
-        </div>
+        </v-fade-transition>
+
+        <!-- Main content -->
+        <v-main v-if="isConnected" class="max-w-screen-xl mx-auto px-6">
+          <v-fade-transition mode="out-in">
+            <router-view/>
+          </v-fade-transition>
+        </v-main>
       </div>
-    </v-fade-transition>
-    
-    <!-- Main content -->
-    <v-main v-if="isConnected">
-      <v-fade-transition mode="out-in">
-        <router-view/>
-      </v-fade-transition>
-    </v-main>
-    
-    <!-- Modern footer -->
-    <v-footer class="glass-footer">
-      <v-container class="py-4">
-        <div class="d-flex flex-column flex-sm-row justify-space-between align-center">
-          <div class="d-flex align-center mb-2 mb-sm-0">
-            <v-icon size="x-small" color="primary" class="mr-1">mdi-pig-variant</v-icon>
-            <span class="text-caption">Pig Vault &copy; {{ new Date().getFullYear() }}</span>
-          </div>
-          <div class="d-flex">
-            <v-btn icon="mdi-twitter" variant="text" color="primary" density="compact" size="x-small" class="mx-1"></v-btn>
-            <v-btn icon="mdi-github" variant="text" color="primary" density="compact" size="x-small" class="mx-1"></v-btn>
-            <v-btn icon="mdi-discord" variant="text" color="primary" density="compact" size="x-small" class="mx-1"></v-btn>
+
+      <!-- Footer -->
+      <footer class="footer-wrapper">
+        <div class="glass-footer">
+          <div class="footer-container max-w-screen-xl mx-auto px-6">
+            <div class="footer-content">
+              <div class="footer-left">
+                <span class="copyright glow-text">&copy; {{ new Date().getFullYear() }} Pig Vault</span>
+              </div>
+              <div class="footer-right">
+                <a href="#" class="footer-link">
+                  <v-icon size="20" color="var(--neon-primary)">mdi-twitter</v-icon>
+                  <span>Twitter</span>
+                </a>
+                <a href="#" class="footer-link">
+                  <v-icon size="20" color="var(--neon-primary)">mdi-discord</v-icon>
+                  <span>Discord</span>
+                </a>
+                <a href="#" class="footer-link">
+                  <v-icon size="20" color="var(--neon-primary)">mdi-file-document-outline</v-icon>
+                  <span>Docs</span>
+                </a>
+              </div>
+            </div>
           </div>
         </div>
-      </v-container>
-    </v-footer>
+      </footer>
+    </div>
   </v-app>
 </template>
 
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --neon-primary: #00ffe0;
+  --neon-secondary: #ff3cbf;
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #1a1a1a;
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --glow-strength: 20px;
+}
+
 /* Global styles */
 html {
-  overflow-x: hidden;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .app-container {
   background: transparent !important;
+  perspective: 1000px;
+  transform-style: preserve-3d;
 }
 
-/* Pig Icon Animation */
-.pig-icon-wrapper {
-  position: relative;
-  display: inline-block;
+/* Background effects */
+.vanta-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
 }
 
-.pig-icon {
-  transition: transform 0.3s ease;
+/* Particle effect */
+.particles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
 }
 
-.pig-icon.happy {
-  animation: pigHappy 0.5s ease-in-out;
-}
-
-@keyframes pigHappy {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.2) rotate(10deg); }
-  100% { transform: scale(1); }
-}
-
-/* Hero Pig Animation */
-.pig-container {
-  position: relative;
-  width: 200px;
-  height: 200px;
-  margin: 0 auto 2rem;
-}
-
-.pig-body {
-  position: relative;
-  width: 150px;
-  height: 150px;
-  background: #FFB6C1;
+.particle {
+  position: absolute;
+  background: var(--neon-primary);
   border-radius: 50%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* Glass card effect */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  border-color: var(--neon-primary);
+  box-shadow: 0 0 var(--glow-strength) var(--neon-primary);
+}
+
+/* Navigation */
+.glass-nav {
+  background: rgba(10, 10, 10, 0.8) !important;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--glass-border);
+  height: 72px !important;
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+}
+
+.brand-title {
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: 1.5rem;
+}
+
+/* Glow effects */
+.glow-text {
+  color: var(--text-primary);
+  text-shadow: 0 0 10px var(--neon-primary);
+}
+
+.glow-hover {
+  transition: all 0.3s ease;
+}
+
+.glow-hover:hover {
+  color: var(--neon-primary) !important;
+  text-shadow: 0 0 10px var(--neon-primary);
+}
+
+.glow-effect {
+  position: relative;
+  background: transparent;
+  border: 1px solid var(--neon-primary);
+  color: var(--neon-primary) !important;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.glow-effect::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 255, 224, 0.2),
+    transparent
+  );
+  transition: 0.5s;
+}
+
+.glow-effect:hover {
+  background: var(--neon-primary);
+  color: var(--bg-primary) !important;
+  box-shadow: 0 0 20px var(--neon-primary);
+  transform: translateY(-2px) scale(1.05);
+}
+
+.glow-effect:hover::before {
+  left: 100%;
+}
+
+/* Hero section */
+.hero-section {
+  padding: 72px 0;
+  position: relative;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  transform: 
+    perspective(1000px)
+    rotateX(calc(var(--tilt-y) * 0.5deg))
+    rotateY(calc(var(--tilt-x) * 0.5deg));
+}
+
+.hero-content {
+  max-width: 800px;
   margin: 0 auto;
-  animation: pigBounce 2s infinite ease-in-out;
+  padding: 0 24px;
 }
 
-.pig-face {
+.pig-container {
+  width: 240px;
+  height: 240px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+}
+
+.pig-animation {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 30px var(--neon-primary));
+}
+
+.coins-shower {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 100px;
-  height: 100px;
-}
-
-.pig-eye {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  background: #000;
-  border-radius: 50%;
-  top: 30%;
-}
-
-.pig-eye.left {
-  left: 20%;
-}
-
-.pig-eye.right {
-  right: 20%;
-}
-
-.pig-nose {
-  position: absolute;
-  width: 30px;
-  height: 20px;
-  background: #FF69B4;
-  border-radius: 50%;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.pig-mouth {
-  position: absolute;
-  width: 40px;
-  height: 20px;
-  border-bottom: 3px solid #000;
-  border-radius: 0 0 20px 20px;
-  bottom: 20%;
+  top: -50px;
   left: 50%;
   transform: translateX(-50%);
+  width: 300px;
+  height: 400px;
+  pointer-events: none;
 }
 
-.pig-ear {
+.coin-wrapper {
   position: absolute;
-  width: 40px;
-  height: 40px;
-  background: #FFB6C1;
-  border-radius: 50%;
-  top: 20%;
+  top: 0;
+  left: 50%;
+  transform: translateX(var(--x-pos));
+  animation: coinFall 2s var(--delay) infinite;
 }
 
-.pig-ear.left {
-  left: -20px;
-  transform: rotate(-30deg);
-}
-
-.pig-ear.right {
-  right: -20px;
-  transform: rotate(30deg);
-}
-
-@keyframes pigBounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-20px); }
-}
-
-/* Coin Animation */
 .coin {
-  position: absolute;
   width: 30px;
   height: 30px;
-  background: #FFD700;
+  background: linear-gradient(135deg, #ffd700, #ffa500);
   border-radius: 50%;
-  box-shadow: inset -5px -5px 10px rgba(0,0,0,0.3);
+  position: relative;
+  animation: coinSpin 1s linear infinite;
 }
 
-.coin::before {
+.coin::after {
   content: '$';
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  color: #B8860B;
+  color: #b8860b;
   font-weight: bold;
+  text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
 }
 
-.coin-container {
-  position: absolute;
-  bottom: -30px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 5px;
-}
-
-.coin-container .coin {
-  position: relative;
-  animation: coinShake 0.5s infinite ease-in-out;
-}
-
-.coin-container .coin:nth-child(1) { animation-delay: 0s; }
-.coin-container .coin:nth-child(2) { animation-delay: 0.1s; }
-.coin-container .coin:nth-child(3) { animation-delay: 0.2s; }
-.coin-container .coin:nth-child(4) { animation-delay: 0.3s; }
-.coin-container .coin:nth-child(5) { animation-delay: 0.4s; }
-
-@keyframes coinShake {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(10deg); }
-}
-
-.floating-coins {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-.floating-coins .coin {
-  position: absolute;
-  animation: floatCoin 15s infinite linear;
-}
-
-.floating-coins .coin:nth-child(1) { left: 10%; top: 20%; animation-delay: 0s; }
-.floating-coins .coin:nth-child(2) { left: 20%; top: 40%; animation-delay: -2s; }
-.floating-coins .coin:nth-child(3) { left: 30%; top: 60%; animation-delay: -4s; }
-.floating-coins .coin:nth-child(4) { left: 40%; top: 80%; animation-delay: -6s; }
-.floating-coins .coin:nth-child(5) { left: 50%; top: 30%; animation-delay: -8s; }
-.floating-coins .coin:nth-child(6) { left: 60%; top: 50%; animation-delay: -10s; }
-.floating-coins .coin:nth-child(7) { left: 70%; top: 70%; animation-delay: -12s; }
-.floating-coins .coin:nth-child(8) { left: 80%; top: 90%; animation-delay: -14s; }
-.floating-coins .coin:nth-child(9) { left: 90%; top: 40%; animation-delay: -16s; }
-.floating-coins .coin:nth-child(10) { left: 95%; top: 60%; animation-delay: -18s; }
-
-@keyframes floatCoin {
+@keyframes coinFall {
   0% {
-    transform: translateY(100vh) rotate(0deg);
+    transform: translateY(-50px) translateX(var(--x-pos));
     opacity: 0;
   }
   10% {
     opacity: 1;
   }
-  90% {
+  60% {
+    transform: translateY(200px) translateX(calc(var(--x-pos) + 20px));
     opacity: 1;
   }
   100% {
-    transform: translateY(-100px) rotate(360deg);
+    transform: translateY(300px) translateX(calc(var(--x-pos) + 30px));
     opacity: 0;
   }
 }
 
-/* Glassmorphic navigation */
-.glass-nav {
-  background: rgba(255, 255, 255, 0.8) !important;
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+@keyframes coinSpin {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
 }
 
-/* Navigation buttons */
-.nav-btn {
-  transition: all 0.3s ease;
-  border-radius: 8px;
-  padding: 8px 16px;
-}
-
-.nav-btn:hover {
-  background: rgba(var(--v-theme-primary), 0.1);
-  transform: translateY(-2px);
-}
-
-/* Connect button */
-.connect-btn {
-  border-radius: 12px;
-  padding: 8px 24px;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(var(--v-theme-primary), 0.2);
-}
-
-.connect-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(var(--v-theme-primary), 0.3);
-}
-
-/* Hero section */
-.hero-section {
-  position: relative;
-  height: calc(100vh - 64px);
+.hero-title {
   display: flex;
-  align-items: center;
   justify-content: center;
-  overflow: hidden;
+  align-items: center;
+  gap: 1rem;
+  font-family: 'Sora', sans-serif;
+  font-size: 5rem;
+  line-height: 1.1;
+  margin-bottom: 2rem;
+  white-space: nowrap;
 }
 
-.hero-content {
+.title-word {
+  display: inline-block;
   position: relative;
-  z-index: 2;
-  text-align: center;
-  padding: 2rem;
+  color: var(--text-primary);
+  animation: titleFloat 3s ease-in-out infinite;
 }
 
-.hero-background {
+.title-word.highlight {
+  background: linear-gradient(120deg, var(--neon-primary), var(--neon-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 15px var(--neon-primary));
+  animation: titleGlow 3s ease-in-out infinite;
+}
+
+.title-word::after {
+  content: '';
   position: absolute;
-  top: 0;
+  bottom: -10px;
   left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, var(--neon-primary), transparent);
+  transform: scaleX(0);
+  transform-origin: center;
+  animation: lineReveal 1.5s ease forwards;
 }
 
-.gradient-sphere {
-  position: absolute;
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  background: radial-gradient(circle at center, rgba(var(--v-theme-primary), 0.2) 0%, transparent 70%);
-  animation: float 20s infinite ease-in-out;
-}
-
-.gradient-sphere:nth-child(1) {
-  top: -100px;
-  left: -100px;
-  animation-delay: 0s;
-}
-
-.gradient-sphere:nth-child(2) {
-  top: 50%;
-  right: -100px;
-  animation-delay: -5s;
-}
-
-.gradient-sphere:nth-child(3) {
-  bottom: -100px;
-  left: 50%;
-  animation-delay: -10s;
-}
-
-@keyframes float {
+@keyframes titleFloat {
   0%, 100% {
-    transform: translate(0, 0);
-  }
-  25% {
-    transform: translate(50px, 50px);
+    transform: translateY(0);
   }
   50% {
-    transform: translate(0, 100px);
-  }
-  75% {
-    transform: translate(-50px, 50px);
+    transform: translateY(-10px);
   }
 }
 
-/* Connect button in hero */
+@keyframes titleGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 15px var(--neon-primary));
+  }
+  50% {
+    filter: drop-shadow(0 0 30px var(--neon-primary));
+  }
+}
+
+@keyframes lineReveal {
+  0% {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+.hero-subtitle {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  margin-bottom: 3rem;
+  opacity: 0.8;
+}
+
+.neon-text {
+  color: var(--neon-primary);
+  text-shadow: 0 0 10px var(--neon-primary);
+}
+
 .connect-btn-hero {
-  padding: 16px 48px;
-  font-size: 1.2rem;
-  border-radius: 16px;
-  transition: all 0.3s ease;
-  box-shadow: 0 8px 30px rgba(var(--v-theme-primary), 0.3);
+  background: transparent !important;
+  border: 2px solid var(--neon-primary) !important;
+  color: var(--neon-primary) !important;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  letter-spacing: 2px;
+  height: 56px;
+  min-width: 240px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .connect-btn-hero:hover {
-  transform: translateY(-4px) scale(1.05);
-  box-shadow: 0 12px 40px rgba(var(--v-theme-primary), 0.4);
+  background: var(--neon-primary) !important;
+  color: var(--bg-primary) !important;
+  box-shadow: 0 0 30px var(--neon-primary);
+  transform: translateY(-2px) scale(1.05);
 }
 
-/* Wallet chip */
-.wallet-chip {
-  border-radius: 12px;
+/* Wallet display */
+.wallet-display {
   padding: 8px 16px;
-  box-shadow: 0 4px 15px rgba(var(--v-theme-success), 0.2);
+  font-family: 'Space Grotesk', monospace;
+  color: var(--neon-primary);
+  letter-spacing: 1px;
 }
 
-/* Glass footer */
+/* Footer */
 .glass-footer {
-  background: rgba(255, 255, 255, 0.8) !important;
+  background: rgba(10, 10, 10, 0.9) !important;
   backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  border-top: 1px solid var(--glass-border);
+  padding: 24px 0;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  z-index: 100;
 }
 
-/* Responsive adjustments */
-@media (max-width: 600px) {
-  .v-container {
-    padding: 12px;
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.copyright {
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.footer-right {
+  display: flex;
+  gap: 2rem;
+}
+
+.footer-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  opacity: 0.8;
+  transition: all 0.3s ease;
+}
+
+.footer-link:hover {
+  opacity: 1;
+  color: var(--neon-primary);
+  transform: translateY(-1px);
+}
+
+.footer-link:hover .v-icon {
+  filter: drop-shadow(0 0 8px var(--neon-primary));
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 2.5rem;
+    flex-direction: column;
+    gap: 0.5rem;
   }
   
-  .hero-content h1 {
-    font-size: 2.5rem !important;
+  .footer-content {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
   }
   
-  .hero-content p {
-    font-size: 1.2rem !important;
+  .footer-right {
+    gap: 1.5rem;
+  }
+
+  .brand-text, .brand-highlight {
+    font-size: 1.5rem;
+  }
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes glow {
+  0%, 100% { filter: drop-shadow(0 0 15px var(--neon-primary)); }
+  50% { filter: drop-shadow(0 0 25px var(--neon-primary)); }
+}
+
+@keyframes borderGlow {
+  0%, 100% { border-color: var(--neon-primary); }
+  50% { border-color: var(--neon-secondary); }
+}
+
+.layout-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.layout-container {
+  flex: 1 0 auto;
+  width: 100%;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+  padding-bottom: 100px; /* 為 footer 預留空間 */
+}
+
+/* 品牌名稱樣式優化 */
+.brand-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.brand-text {
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: 1.75rem;
+  color: var(--text-primary);
+  letter-spacing: 1px;
+}
+
+.brand-highlight {
+  font-family: 'Sora', sans-serif;
+  font-weight: 700;
+  font-size: 1.75rem;
+  background: linear-gradient(120deg, var(--neon-primary), var(--neon-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  position: relative;
+}
+
+.brand-underline {
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--neon-primary), var(--neon-secondary));
+  transform-origin: left;
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.brand-wrapper:hover .brand-underline {
+  transform: scaleX(1);
+}
+
+/* Footer 定位優化 */
+.footer-wrapper {
+  width: 100%;
+  margin-top: auto;
+}
+
+.glass-footer {
+  background: rgba(10, 10, 10, 0.9) !important;
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--glass-border);
+  padding: 24px 0;
+  width: 100%;
+  z-index: 100;
+}
+
+.footer-container {
+  width: 100%;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+/* 響應式優化 */
+@media (max-width: 768px) {
+  .layout-container {
+    padding-bottom: 140px; /* 移動端為 footer 預留更多空間 */
   }
   
-  .gradient-sphere {
-    width: 200px;
-    height: 200px;
+  .hero-title {
+    font-size: 2.5rem;
+    flex-direction: column;
+    gap: 0.5rem;
   }
   
-  .pig-container {
-    width: 150px;
-    height: 150px;
+  .footer-content {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
   }
   
-  .pig-body {
-    width: 100px;
-    height: 100px;
+  .footer-right {
+    gap: 1.5rem;
+  }
+
+  .brand-text, .brand-highlight {
+    font-size: 1.5rem;
   }
 }
 </style>
