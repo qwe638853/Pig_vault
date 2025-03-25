@@ -84,78 +84,105 @@
               <v-icon color="primary" class="mr-2 glow-icon">mdi-coin</v-icon>
               <span class="text-h6 glow-text-subtle">找到 {{ tokens.length }} 個代幣</span>
             </div>
-            <v-btn
-              color="primary"
-              class="glow-effect"
-              :disabled="!hasSelectedTokens"
-              @click="processSelectedTokens"
-            >
-              處理已選取的代幣 ({{ selectedTokens.length }})
-            </v-btn>
+            <div class="d-flex gap-2">
+              <v-select
+                v-model="sortBy"
+                :items="sortOptions"
+                item-title="title"
+                item-value="value"
+                density="compact"
+                label="排序方式"
+                hide-details
+                variant="outlined"
+                class="sort-select mr-2"
+                style="min-width: 150px"
+              ></v-select>
+              <v-btn
+                color="primary"
+                class="glow-effect"
+                :disabled="!hasSelectedTokens"
+                @click="processSelectedTokens"
+              >
+                處理已選取的代幣 ({{ selectedTokens.length }})
+              </v-btn>
+            </div>
           </v-col>
         </v-row>
 
+        <!-- 卡片網格佈局 -->
         <v-row>
-          <v-col cols="12">
-            <v-card class="token-table-card glass-card">
-              <v-data-table
-                v-model="selectedTokens"
-                :headers="tableHeaders"
-                :items="tokens"
-                :sort-by="[{ key: 'value', order: 'desc' }]"
-                item-value="address"
-                density="compact"
-                hover
-                show-select
-                class="token-table"
-              >
-                <template v-slot:item.symbol="{ item }">
-                  <div class="d-flex align-center">
-                    <v-avatar
-                      :image="item.logoURI || undefined"
-                      :color="item.logoURI ? undefined : getTokenColor(item.symbol)"
-                      size="28"
-                      class="mr-2 token-avatar"
-                    >
-                      <span v-if="!item.logoURI" class="text-white text-caption">{{ item.symbol[0] }}</span>
-                    </v-avatar>
-                    <span class="token-symbol">{{ item.symbol }}</span>
-                  </div>
-                </template>
+          <v-col 
+            v-for="token in sortedTokens" 
+            :key="token.address" 
+            cols="12" sm="6" md="4" lg="3" xl="2"
+            class="token-card-col"
+          >
+            <v-card 
+              class="token-card glass-card h-100"
+              :class="{'selected-token': isTokenSelected(token.address)}"
+              @click="toggleTokenSelection(token.address)"
+            >
+              <div class="token-card-overlay">
+                <v-icon 
+                  :color="isTokenSelected(token.address) ? 'success' : 'white'" 
+                  size="large"
+                >
+                  {{ isTokenSelected(token.address) ? 'mdi-check-circle' : 'mdi-checkbox-blank-circle-outline' }}
+                </v-icon>
+              </div>
+              
+              <v-card-item class="token-card-header">
+                <v-avatar
+                  :image="token.logoURI || undefined"
+                  :color="token.logoURI ? undefined : getTokenColor(token.symbol)"
+                  size="48"
+                  class="mr-2 token-avatar"
+                >
+                  <span v-if="!token.logoURI" class="text-white">{{ token.symbol[0] }}</span>
+                </v-avatar>
+                <div class="token-info">
+                  <v-card-title class="px-0 pt-0 pb-1">{{ token.symbol }}</v-card-title>
+                  <v-card-subtitle class="px-0 py-0 token-name">{{ token.name }}</v-card-subtitle>
+                </div>
+              </v-card-item>
+              
+              <v-divider class="token-card-divider"></v-divider>
+              
+              <v-card-text class="token-card-content">
+                <div class="token-data-row">
+                  <span class="token-data-label">餘額</span>
+                  <span class="token-data-value">{{ formatBalance(token.balance, token.decimals) }}</span>
+                </div>
+                <div class="token-data-row">
+                  <span class="token-data-label">價值</span>
+                  <span class="token-data-value token-value">${{ formatValue(token.value) }}</span>
+                </div>
+              </v-card-text>
+              
+              <v-card-actions class="token-card-actions">
+                <v-chip
+                  :color="getTokenStatusColor(token.status)"
+                  size="small"
+                  label
+                  class="status-chip"
+                >
+                  {{ getLocalizedStatus(token.status) }}
+                </v-chip>
                 
-                <template v-slot:item.balance="{ item }">
-                  <div class="token-balance">{{ formatBalance(item.balance, item.decimals) }}</div>
-                </template>
+                <v-spacer></v-spacer>
                 
-                <template v-slot:item.value="{ item }">
-                  <div class="token-value">${{ formatValue(item.value) }}</div>
-                </template>
-                
-                <template v-slot:item.status="{ item }">
-                  <v-chip
-                    :color="getTokenStatusColor(item.status)"
-                    size="small"
-                    label
-                    class="status-chip"
-                  >
-                    {{ getLocalizedStatus(item.status) }}
-                  </v-chip>
-                </template>
-
-                <template v-slot:item.actions="{ item }">
-                  <v-btn
-                    icon
-                    v-if="item.details"
-                    color="primary"
-                    size="small"
-                    variant="text"
-                    class="details-btn"
-                    @click="showTokenDetails(item)"
-                  >
-                    <v-icon>mdi-information-outline</v-icon>
-                  </v-btn>
-                </template>
-              </v-data-table>
+                <v-btn
+                  icon
+                  v-if="token.details"
+                  color="primary"
+                  size="small"
+                  variant="text"
+                  class="details-btn"
+                  @click.stop="showTokenDetails(token)"
+                >
+                  <v-icon>mdi-information-outline</v-icon>
+                </v-btn>
+              </v-card-actions>
             </v-card>
           </v-col>
         </v-row>
@@ -358,7 +385,6 @@
 <script setup>
 import { ref, computed, inject, onMounted, watch } from 'vue'
 import { useDisplay } from 'vuetify'
-import WelcomeScreen from '../components/WelcomeScreen.vue'
 import { API_BASE_URL, CHAINS, TOKEN_STATUS } from '../config'
 
 const isConnected = inject('isConnected', ref(false))
@@ -395,6 +421,57 @@ const hasSelectedTokens = computed(() => selectedTokens.value.length > 0)
 // 詳細信息相關
 const isDetailsDialogOpen = ref(false)
 const selectedTokenDetails = ref(null)
+
+// 排序選項
+const sortOptions = [
+  { title: '價值高到低', value: 'value-desc' },
+  { title: '價值低到高', value: 'value-asc' },
+  { title: '名稱 A-Z', value: 'name-asc' },
+  { title: '名稱 Z-A', value: 'name-desc' },
+  { title: '餘額高到低', value: 'balance-desc' },
+  { title: '餘額低到高', value: 'balance-asc' }
+]
+
+const sortBy = ref('value-desc')
+const sortedTokens = computed(() => {
+  const [field, direction] = sortBy.value.split('-')
+  const directionMultiplier = direction === 'asc' ? 1 : -1
+  
+  return [...tokens.value].sort((a, b) => {
+    let aValue, bValue
+    
+    if (field === 'value') {
+      aValue = a.value
+      bValue = b.value
+    } else if (field === 'name') {
+      aValue = a.name
+      bValue = b.name
+    } else if (field === 'balance') {
+      aValue = parseFloat(formatBalance(a.balance, a.decimals))
+      bValue = parseFloat(formatBalance(b.balance, b.decimals))
+    }
+    
+    if (typeof aValue === 'string') {
+      return directionMultiplier * aValue.localeCompare(bValue)
+    } else {
+      return directionMultiplier * (aValue - bValue)
+    }
+  })
+})
+
+// 選擇代幣的方法
+const isTokenSelected = (tokenAddress) => {
+  return selectedTokens.value.includes(tokenAddress)
+}
+
+const toggleTokenSelection = (tokenAddress) => {
+  const index = selectedTokens.value.indexOf(tokenAddress)
+  if (index === -1) {
+    selectedTokens.value.push(tokenAddress)
+  } else {
+    selectedTokens.value.splice(index, 1)
+  }
+}
 
 // 方法
 const loadUserTokens = async () => {
@@ -777,6 +854,138 @@ const formatLargeNumber = (num) => {
   
   .details-card {
     margin: 0 8px;
+  }
+}
+
+/* 代幣卡片樣式 */
+.token-card-col {
+  transition: transform 0.3s ease;
+}
+
+.token-card {
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  overflow: hidden;
+  height: 100%;
+  position: relative;
+  cursor: pointer;
+}
+
+.token-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--neon-primary);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1), 0 0 15px var(--neon-primary);
+}
+
+.token-card-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.token-card:hover .token-card-overlay {
+  opacity: 1;
+}
+
+.selected-token {
+  border: 2px solid var(--neon-primary) !important;
+  box-shadow: 0 0 15px var(--neon-primary);
+}
+
+.selected-token .token-card-overlay {
+  opacity: 1;
+}
+
+.token-card-header {
+  display: flex;
+  align-items: center;
+  padding-bottom: 8px;
+}
+
+.token-info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.token-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  opacity: 0.7;
+}
+
+.token-card-divider {
+  opacity: 0.3;
+}
+
+.token-card-content {
+  padding: 12px 16px;
+}
+
+.token-data-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.token-data-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.token-data-value {
+  font-family: 'Space Grotesk', monospace;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.token-value {
+  color: var(--neon-primary);
+  text-shadow: 0 0 5px rgba(0, 255, 224, 0.3);
+}
+
+.token-card-actions {
+  padding: 8px 16px 16px;
+}
+
+.status-chip {
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 0 8px rgba(0, 255, 224, 0.2);
+}
+
+.details-btn {
+  transition: all 0.3s ease;
+}
+
+.details-btn:hover {
+  transform: scale(1.2);
+  color: var(--neon-primary) !important;
+  filter: drop-shadow(0 0 5px var(--neon-primary));
+}
+
+/* 排序選擇器 */
+.sort-select {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 響應式設計優化 */
+@media (max-width: 599px) {
+  .token-card {
+    margin-bottom: 16px;
+  }
+}
+
+@media (min-width: 600px) and (max-width: 959px) {
+  .token-card-col {
+    padding: 8px;
   }
 }
 </style>
