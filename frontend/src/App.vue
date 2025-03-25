@@ -2,54 +2,81 @@
 import { ref, onMounted, provide } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
+import { ethers } from 'ethers'
 
 const router = useRouter()
 const display = useDisplay()
+const drawer = ref(false)
 const isConnected = ref(false)
 const address = ref('')
-const drawer = ref(false)
 const showHero = ref(true)
+const isMobile = display.mobile
 const pigAnimation = ref('idle')
 
 // Provide reactive states to all components
 provide('isConnected', isConnected)
 provide('address', address)
-provide('isMobile', display.mobile)
+provide('isMobile', isMobile)
 
 const connectWallet = async () => {
   try {
-    if (typeof window.ethereum !== 'undefined') {
-      pigAnimation.value = 'happy'
-      setTimeout(() => {
-        pigAnimation.value = 'idle'
-      }, 2000)
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-      address.value = accounts[0]
-      isConnected.value = true
-      showHero.value = false
-    } else {
-      alert('Please install MetaMask wallet')
+    if (!window.ethereum) {
+      alert('請先安裝 MetaMask!')
+      return
     }
+
+    // 請求用戶授權
+    const accounts = await window.ethereum.request({ 
+      method: 'eth_requestAccounts',
+      params: [{ eth_accounts: {} }]
+    })
+    
+    // 請求用戶簽名
+    const message = 'Welcome to Pig Vault!\n\nPlease sign this message to connect your wallet.'
+    const signature = await window.ethereum.request({
+      method: 'personal_sign',
+      params: [message, accounts[0]]
+    })
+
+    // 驗證簽名
+    const recoveredAddress = ethers.verifyMessage(message, signature)
+    if (recoveredAddress.toLowerCase() !== accounts[0].toLowerCase()) {
+      throw new Error('簽名驗證失敗')
+    }
+
+    isConnected.value = true
+    address.value = accounts[0]
+    showHero.value = false
   } catch (error) {
-    console.error('Failed to connect wallet:', error)
-    alert('Failed to connect wallet')
+    console.error('連接錢包失敗:', error)
+    alert('連接錢包失敗: ' + error.message)
   }
 }
 
-const disconnectWallet = () => {
-  isConnected.value = false
-  address.value = ''
-  showHero.value = true
+const disconnectWallet = async () => {
+  try {
+    // 清除錢包連接狀態
+    isConnected.value = false
+    address.value = null
+    showHero.value = true
+    
+
+  } catch (error) {
+    console.error('斷開錢包失敗:', error)
+  }
 }
 
-onMounted(async () => {
-  if (typeof window.ethereum !== 'undefined') {
-    const accounts = await window.ethereum.request({ method: 'eth_accounts' })
-    if (accounts.length > 0) {
-      address.value = accounts[0]
-      isConnected.value = true
-      showHero.value = false
-    }
+onMounted(() => {
+
+  
+  // 監聽來自 WelcomeScreen 的連接錢包事件
+  window.addEventListener('connect-wallet', () => {
+    connectWallet()
+  })
+  
+  return () => {
+    // 在組件卸載時移除事件監聽器
+    window.removeEventListener('connect-wallet', connectWallet)
   }
 })
 
