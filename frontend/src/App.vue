@@ -107,36 +107,6 @@ onMounted(() => {
   // Start typing animation
   typeText()
 
-  // Initialize coin animation
-  anime({
-    targets: '.coin',
-    translateY: function() {
-      return anime.random(-30, 30)
-    },
-    translateX: function() {
-      return anime.random(-30, 30)
-    },
-    rotate: function() {
-      return anime.random(-360, 360)
-    },
-    scale: function() {
-      return anime.random(0.8, 1.2)
-    },
-    duration: function() {
-      return anime.random(1000, 3000)
-    },
-    delay: function() {
-      return anime.random(0, 1000)
-    },
-    loop: true,
-    easing: 'easeInOutQuad'
-  })
-
-  // 監聽來自 WelcomeScreen 的連接錢包事件
-  window.addEventListener('connect-wallet', () => {
-    connectWallet()
-  })
-  
   // 觸發標題動畫
   setTimeout(() => {
     titleVisible.value = true
@@ -193,7 +163,7 @@ const connectWallet = async () => {
 
 const disconnectWallet = async () => {
   try {
-    isConnected.value = false
+  isConnected.value = false
     address.value = null
     showHero.value = true
   } catch (error) {
@@ -232,7 +202,7 @@ const items = [
       <div class="layout-container max-w-screen-xl mx-auto px-6">
         <!-- Navigation -->
         <v-app-bar flat class="glass-nav px-6">
-          <div class="d-flex align-center">
+        <div class="d-flex align-center">
             <v-app-bar-title class="brand-title">
               <div class="brand-wrapper">
                 <span class="brand-text">Pig</span>
@@ -240,108 +210,98 @@ const items = [
                 <div class="brand-underline"></div>
               </div>
             </v-app-bar-title>
-          </div>
+        </div>
           
           <v-spacer></v-spacer>
-          
+      
           <div class="d-none d-md-flex align-center gap-6">
-            <v-btn 
-              v-for="item in items" 
-              :key="item.title" 
-              :to="item.to" 
-              variant="text" 
+        <v-btn 
+          v-for="item in items" 
+          :key="item.title" 
+          :to="item.to" 
+          variant="text" 
               class="nav-btn glow-hover"
-            >
-              {{ item.title }}
-            </v-btn>
-            
-            <v-btn 
-              v-if="!isConnected"
+        >
+          {{ item.title }}
+        </v-btn>
+      
+        <v-btn 
+          v-if="!isConnected"
               class="connect-btn glow-effect"
-              @click="connectWallet"
-            >
+          @click="connectWallet"
+        >
               <v-icon left class="mr-2">mdi-wallet</v-icon>
-              Connect Wallet
-            </v-btn>
+          Connect Wallet
+        </v-btn>
 
-            <template v-else>
+        <template v-else>
               <div class="wallet-display glass-card">
                 <v-icon left class="mr-2" color="var(--neon-primary)">mdi-wallet-outline</v-icon>
                 {{ address.substring(0, 6) }}...{{ address.substring(address.length - 4) }}
               </div>
-            </template>
-          </div>
-        </v-app-bar>
-
+        </template>
+      </div>
+    </v-app-bar>
+    
         <!-- Hero Section -->
-        <v-fade-transition>
-          <div v-if="showHero" class="hero-section min-h-screen flex items-center justify-center" 
-               :style="{
-                 '--tilt-x': tilt + 'deg',
-                 '--tilt-y': roll + 'deg'
-               }">
-            <div class="hero-content" 
-                 v-motion
-                 :initial="{ opacity: 0, y: 100 }"
-                 :enter="{ opacity: 1, y: 0 }">
-              
-              <!-- Animated Pig and Coins -->
-              <div class="relative mb-16">
-                <div class="pig-container">
-                  <lottie-player
-                    src="@/assets/pig-animation.json"
-                    background="transparent"
-                    speed="1"
-                    class="pig-animation"
-                    loop
-                    autoplay
-                  ></lottie-player>
-                </div>
-                
-                <!-- Coin shower effect -->
-                <div class="coins-shower">
-                  <template v-for="n in 12" :key="n">
-                    <div class="coin-wrapper"
-                         :style="{
-                           '--delay': `${n * 0.2}s`,
-                           '--x-pos': `${(n % 3 - 1) * 30}px`
-                         }">
-                      <div class="coin"></div>
-                    </div>
-                  </template>
+        <div class="hero-section min-h-screen flex items-center justify-center">
+          <!-- 背景層 -->
+          <div class="background-layer">
+            <div class="enhanced-background">
+              <div class="particles-container">
+                <div v-for="n in 50" :key="n" 
+                     class="particle-dot"
+                     :style="{
+                       '--x': `${Math.random() * 100}%`,
+                       '--y': `${Math.random() * 100}%`,
+                       '--size': `${Math.random() * 3 + 1}px`,
+                       '--speed': `${Math.random() * 20 + 10}s`,
+                       '--delay': `${Math.random() * -20}s`
+                     }">
                 </div>
               </div>
-
-              <!-- Hero Text -->
-              <div class="text-center space-y-8">
-                <h1 class="hero-title">
-                  <span class="title-word">Welcome to</span>
-                  <span class="title-word highlight">Pig Vault</span>
-                </h1>
-                
-                <p class="hero-subtitle neon-text">{{ displayText }}</p>
-                
-                <v-btn
-                  class="connect-btn-hero glow-effect mt-12"
-                  @click="connectWallet"
-                  v-motion
-                  :initial="{ scale: 0.8, opacity: 0 }"
-                  :enter="{ scale: 1, opacity: 1 }"
-                >
-                  <v-icon left class="mr-2">mdi-wallet</v-icon>
-                  CONNECT WALLET
-                </v-btn>
-              </div>
+              <div class="gradient-overlay"></div>
             </div>
           </div>
-        </v-fade-transition>
+
+          <!-- 內容層 -->
+          <div class="content-layer">
+            <div class="hero-content text-center max-w-screen-xl mx-auto px-6">
+              <!-- Main Title Group -->
+              <div class="title-group mb-12">
+                <h1 class="hero-title">
+                  <div class="title-line">
+                    <span class="title-char" v-for="(char, index) in 'Welcome to'"
+                          :key="'welcome-'+index"
+                          :style="{ '--char-delay': `${index * 0.05}s` }">
+                      {{ char }}
+                    </span>
+                  </div>
+                  <div class="title-line highlight" data-text="Pig Vault">
+                    <span class="title-char" v-for="(char, index) in 'Pig Vault'"
+                          :key="'pigvault-'+index"
+                          :style="{ '--char-delay': `${index * 0.05}s` }">
+                      {{ char }}
+                    </span>
+                  </div>
+                </h1>
+                <p class="hero-subtitle">{{ displayText }}</p>
+              </div>
+
+              <v-btn class="connect-btn-hero" @click="connectWallet">
+                <v-icon class="wallet-icon mr-2">mdi-wallet</v-icon>
+                CONNECT WALLET
+              </v-btn>
+            </div>
+          </div>
+        </div>
 
         <!-- Main content -->
         <v-main v-if="isConnected" class="max-w-screen-xl mx-auto px-6">
-          <v-fade-transition mode="out-in">
-            <router-view/>
-          </v-fade-transition>
-        </v-main>
+      <v-fade-transition mode="out-in">
+        <router-view/>
+      </v-fade-transition>
+    </v-main>
       </div>
 
       <!-- Footer -->
@@ -366,7 +326,7 @@ const items = [
                   <span>Docs</span>
                 </a>
               </div>
-            </div>
+          </div>
           </div>
         </div>
       </footer>
@@ -611,80 +571,98 @@ html {
 }
 
 .hero-title {
+  font-family: 'Sora', sans-serif;
+  font-size: clamp(4rem, 10vw, 8rem);
+  font-weight: 800;
+  line-height: 1.2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+  color: #ffffff;
+  text-shadow: 
+    0 0 10px rgba(0, 255, 224, 0.1),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.02em;
+}
+
+.title-line {
   display: flex;
   justify-content: center;
-  align-items: center;
-  gap: 1rem;
-  font-family: 'Sora', sans-serif;
-  font-size: 5rem;
-  line-height: 1.1;
-  margin-bottom: 2rem;
-  white-space: nowrap;
+  gap: 0.5rem;
+  overflow: visible;
+  padding: 0.5rem 0;
 }
 
-.title-word {
-  display: inline-block;
-  position: relative;
-  color: var(--text-primary);
-  animation: titleFloat 3s ease-in-out infinite;
-}
-
-.title-word.highlight {
-  background: linear-gradient(120deg, var(--neon-primary), var(--neon-secondary));
+.title-line.highlight {
+  background: linear-gradient(135deg,
+    rgb(255, 255, 255) 0%,
+    rgb(0, 255, 224) 100%
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 15px var(--neon-primary));
-  animation: titleGlow 3s ease-in-out infinite;
+  position: relative;
+  text-shadow: 
+    0 0 10px rgba(0, 255, 224, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.02em;
+  font-weight: 800;
 }
 
-.title-word::after {
-  content: '';
+.title-line.highlight::after {
+  content: attr(data-text);
   position: absolute;
-  bottom: -10px;
   left: 0;
+  top: 0;
   width: 100%;
-  height: 4px;
-  background: linear-gradient(90deg, transparent, var(--neon-primary), transparent);
-  transform: scaleX(0);
-  transform-origin: center;
-  animation: lineReveal 1.5s ease forwards;
+  height: 100%;
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(0, 255, 224, 0.95) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: blur(2px);
+  opacity: 0.3;
+  z-index: -1;
 }
 
-@keyframes titleFloat {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes titleGlow {
-  0%, 100% {
-    filter: drop-shadow(0 0 15px var(--neon-primary));
-  }
-  50% {
-    filter: drop-shadow(0 0 30px var(--neon-primary));
-  }
-}
-
-@keyframes lineReveal {
-  0% {
-    transform: scaleX(0);
-    opacity: 0;
-  }
-  100% {
-    transform: scaleX(1);
-    opacity: 1;
-  }
+.title-char {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(50px);
+  animation: charReveal 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: var(--char-delay);
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .hero-subtitle {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: 1.5rem;
-  color: var(--text-secondary);
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+  color: rgba(255, 255, 255, 0.95);
   margin-bottom: 3rem;
-  opacity: 0.8;
+  text-shadow: 
+    0 0 20px rgba(0, 255, 224, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.8);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .neon-text {
@@ -693,22 +671,33 @@ html {
 }
 
 .connect-btn-hero {
-  background: transparent !important;
-  border: 2px solid var(--neon-primary) !important;
-  color: var(--neon-primary) !important;
+  position: relative;
+  z-index: 20;
+  background: rgba(0, 255, 224, 0.1) !important;
+  border: 1px solid rgba(0, 255, 224, 0.5) !important;
+  color: #ffffff !important;
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 600;
   letter-spacing: 2px;
   height: 56px;
   min-width: 240px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 0 20px rgba(0, 255, 224, 0.1);
 }
 
 .connect-btn-hero:hover {
-  background: var(--neon-primary) !important;
-  color: var(--bg-primary) !important;
-  box-shadow: 0 0 30px var(--neon-primary);
-  transform: translateY(-2px) scale(1.05);
+  background: rgba(0, 255, 224, 0.2) !important;
+  border-color: rgba(0, 255, 224, 0.8) !important;
+  transform: scale(1.05) translateY(-2px);
+  box-shadow: 
+    0 0 30px rgba(0, 255, 224, 0.2),
+    inset 0 0 15px rgba(0, 255, 224, 0.1);
+}
+
+.connect-btn-hero:active {
+  transform: scale(0.98);
+  box-shadow: inset 0 0 20px rgba(0, 255, 224, 0.2);
 }
 
 /* Wallet display */
@@ -775,23 +764,23 @@ html {
 /* Responsive */
 @media (max-width: 768px) {
   .hero-title {
-    font-size: 2.5rem;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  
-  .footer-content {
-    flex-direction: column;
+    font-size: clamp(3rem, 8vw, 5rem);
     gap: 1rem;
-    text-align: center;
   }
   
-  .footer-right {
-    gap: 1.5rem;
+  .title-line.highlight {
+    text-shadow: 
+      0 0 8px rgba(0, 255, 224, 0.15),
+      0 2px 4px rgba(0, 0, 0, 0.3);
   }
-
-  .brand-text, .brand-highlight {
-    font-size: 1.5rem;
+  
+  .hero-subtitle {
+    font-size: 1.25rem;
+    padding: 0 1rem;
+  }
+  
+  .particle-dot {
+    --size: calc(var(--size) * 0.7);
   }
 }
 
@@ -919,6 +908,110 @@ html {
 
   .brand-text, .brand-highlight {
     font-size: 1.5rem;
+  }
+}
+
+/* 移除舊的金幣動畫相關樣式 */
+.coins-shower, .coin-wrapper, .coin {
+  display: none;
+}
+
+/* 背景層樣式 */
+.background-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.enhanced-background {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0.6;
+}
+
+.particles-container {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.particle-dot {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--size);
+  height: var(--size);
+  background: rgba(0, 255, 224, 0.6);
+  border-radius: 50%;
+  animation: floatParticle var(--speed) linear infinite;
+  animation-delay: var(--delay);
+  filter: blur(1px);
+  box-shadow: 
+    0 0 15px rgba(0, 255, 224, 0.6),
+    0 0 30px rgba(0, 255, 224, 0.3);
+}
+
+.gradient-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(10, 10, 10, 0.3) 0%,
+    rgba(10, 10, 10, 0.7) 100%
+  );
+}
+
+/* 內容層樣式 */
+.content-layer {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes floatParticle {
+  0% {
+    transform: translateZ(0) translateY(0) scale(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+    transform: translateZ(100px) translateY(-20px) scale(1.2);
+  }
+  50% {
+    transform: translateZ(300px) translateY(-50px) scale(1.5);
+  }
+  90% {
+    opacity: 1;
+    transform: translateZ(400px) translateY(-80px) scale(1.2);
+  }
+  100% {
+    transform: translateZ(500px) translateY(-100px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes charReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(50px) scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 </style>
