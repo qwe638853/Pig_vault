@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, provide } from 'vue'
+import { ref, onMounted, provide, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { ethers } from 'ethers'
@@ -20,11 +20,36 @@ const pigAnimation = ref('idle')
 const isDark = useDark()
 const toggleDark = useToggle(isDark)
 
+// 性能控制
+const isLowPerformanceMode = ref(false)
+const particleCount = computed(() => isLowPerformanceMode.value ? 20 : 50)
+
+// 檢測設備性能
+const checkDevicePerformance = () => {
+  // 移動設備默認使用低性能模式
+  if (display.mobile.value || display.xs.value) {
+    isLowPerformanceMode.value = true
+    return
+  }
+  
+  // 簡單的性能檢測
+  const start = performance.now()
+  let count = 0
+  
+  while (performance.now() - start < 5) {
+    count++
+  }
+  
+  // 基於簡單基準測試決定性能模式
+  isLowPerformanceMode.value = count < 50000
+}
+
 // 提供值給子元件
 provide('isConnected', isConnected)
 provide('address', address)
 provide('toggleDark', toggleDark)
 provide('isDark', isDark)
+provide('isLowPerformanceMode', isLowPerformanceMode)
 
 // 視差效果
 const target = ref(null)
@@ -91,6 +116,9 @@ const toggleDrawer = () => {
 }
 
 onMounted(() => {
+  // 檢測設備性能
+  checkDevicePerformance()
+
   // 初始化 Vanta.js 背景
   if (window.VANTA) {
     window.VANTA.NET({
@@ -104,11 +132,11 @@ onMounted(() => {
       scaleMobile: 1.00,
       color: 0x00ffe0,
       backgroundColor: 0x0a0a0a,
-      points: 15,
+      points: isLowPerformanceMode.value ? 10 : 15,
       maxDistance: 25.00,
       spacing: 18.00,
       showDots: false,
-      blur: 1
+      blur: isLowPerformanceMode.value ? 0 : 1
     })
   }
 
@@ -397,25 +425,6 @@ const formatAddress = (addr) => {
                  '--tilt-x': tilt + 'deg',
                  '--tilt-y': roll + 'deg'
                }">
-            <!-- 背景層 -->
-            <div class="background-layer">
-              <div class="enhanced-background">
-                <div class="particles-container">
-                  <div v-for="n in 50" :key="n" 
-                       class="particle-dot"
-                       :style="{
-                         '--x': `${Math.random() * 100}%`,
-                         '--y': `${Math.random() * 100}%`,
-                         '--size': `${Math.random() * 3 + 1}px`,
-                         '--speed': `${Math.random() * 20 + 10}s`,
-                         '--delay': `${Math.random() * -20}s`
-                       }">
-                  </div>
-                </div>
-                <div class="gradient-overlay"></div>
-              </div>
-            </div>
-            
             <!-- 內容層 -->
             <div class="content-layer">
               <div class="hero-content text-center max-w-screen-xl mx-auto px-6">
@@ -450,11 +459,30 @@ const formatAddress = (addr) => {
         </v-fade-transition>
 
         <!-- 主要內容區 -->
-        <v-main class="max-w-screen-xl mx-auto" :class="{ 'pt-0': isConnected && !showHero }">
+        <v-main class="main-content max-w-screen-xl mx-auto" :class="{ 'pt-0': isConnected && !showHero }">
           <v-fade-transition mode="out-in">
             <router-view v-if="isConnected || !showHero"/>
           </v-fade-transition>
         </v-main>
+
+        <!-- 全域背景層 -->
+        <div class="global-background-layer">
+          <div class="enhanced-background" :class="{ 'low-performance': isLowPerformanceMode }">
+            <div class="particles-container">
+              <div v-for="n in particleCount" :key="n" 
+                  class="particle-dot"
+                  :style="{
+                    '--x': `${Math.random() * 100}%`,
+                    '--y': `${Math.random() * 100}%`,
+                    '--size': `${Math.random() * 3 + 1}px`,
+                    '--speed': `${Math.random() * 20 + 10}s`,
+                    '--delay': `${Math.random() * -20}s`
+                  }">
+              </div>
+            </div>
+            <div class="gradient-overlay"></div>
+          </div>
+        </div>
       </div>
 
       <!-- 頁腳 -->
@@ -524,7 +552,7 @@ html {
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: -1;
+  z-index: -3;
   background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
 }
 
@@ -983,6 +1011,18 @@ html {
   
   .particle-dot {
     --size: calc(var(--size) * 0.7);
+    box-shadow: 
+      0 0 8px rgba(0, 255, 224, 0.6),
+      0 0 16px rgba(0, 255, 224, 0.3);
+  }
+  
+  .glass-nav, .glass-footer {
+    backdrop-filter: blur(5px);
+  }
+  
+  .main-content {
+    margin-top: 64px; /* 移動版導航欄高度調整 */
+    min-height: calc(100vh - 154px);
   }
 }
 
@@ -993,6 +1033,18 @@ html {
   
   .hero-subtitle {
     font-size: 1.2rem;
+  }
+  
+  .particle-dot {
+    --size: calc(var(--size) * 0.5);
+  }
+  
+  .enhanced-background {
+    opacity: 0.6;
+  }
+  
+  .main-content {
+    margin-top: 56px;
   }
 }
 
@@ -1096,7 +1148,7 @@ html {
   width: 100%;
 }
 
-/* 響應式優化 */
+/* 響應式優化 - 背景效果 */
 @media (max-width: 768px) {
   .layout-container {
     padding-bottom: 140px; /* 移動端為 footer 預留更多空間 */
@@ -1141,13 +1193,17 @@ html {
 
 .enhanced-background {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.6;
+  opacity: 0.8;
 }
 
 .particles-container {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
@@ -1225,5 +1281,87 @@ html {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+/* 全域背景層樣式 */
+.global-background-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* 主要內容區樣式 */
+.main-content {
+  position: relative;
+  z-index: 10;
+  background: transparent;
+  margin-top: 72px; /* 導航欄高度 */
+  min-height: calc(100vh - 172px); /* 視窗高度減去導航欄和頁腳高度 */
+  width: 100%;
+  padding: 0;
+}
+
+/* 確保路由視圖內容正確顯示 */
+.v-window__container {
+  background: transparent;
+}
+
+/* 響應式優化 - 背景效果 */
+@media (max-width: 768px) {
+  .particle-dot {
+    --size: calc(var(--size) * 0.7);
+    box-shadow: 
+      0 0 8px rgba(0, 255, 224, 0.6),
+      0 0 16px rgba(0, 255, 224, 0.3);
+  }
+  
+  .glass-nav, .glass-footer {
+    backdrop-filter: blur(5px);
+  }
+  
+  .main-content {
+    margin-top: 64px; /* 移動版導航欄高度調整 */
+    min-height: calc(100vh - 154px);
+  }
+}
+
+@media (max-width: 600px) {
+  .particle-dot {
+    --size: calc(var(--size) * 0.5);
+  }
+  
+  .enhanced-background {
+    opacity: 0.6;
+  }
+  
+  .main-content {
+    margin-top: 56px;
+  }
+}
+
+/* 高DPI屏幕優化 */
+@media (min-width: 1920px) {
+  .particle-dot {
+    --size: calc(var(--size) * 1.5);
+    box-shadow: 
+      0 0 20px rgba(0, 255, 224, 0.6),
+      0 0 40px rgba(0, 255, 224, 0.3);
+  }
+}
+
+/* 性能優化相關樣式 */
+.low-performance {
+  opacity: 0.5;
+}
+
+.low-performance .particle-dot {
+  animation-duration: calc(var(--speed) * 1.5);
+  filter: none;
+  box-shadow: 0 0 5px rgba(0, 255, 224, 0.5);
 }
 </style>
