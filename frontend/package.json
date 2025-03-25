@@ -1,26 +1,28 @@
 {
-  "name": "pig_vault",
-  "private": true,
+  "name": "frontend",
   "version": "0.0.0",
-  "type": "module",
+  "private": true,
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "vue": "^3.5.13",
-    "ethers": "^6.11.1",
-    "vue-router": "^4.3.0",
-    "pinia": "^2.1.7",
-    "@headlessui/vue": "^1.7.19",
-    "@heroicons/vue": "^2.1.1"
+    "@vueuse/core": "^10.7.0",
+    "@vueuse/motion": "^2.0.0",
+    "animejs": "^3.2.2",
+    "ethers": "^6.9.0",
+    "three": "^0.159.0",
+    "vanta": "^0.5.24",
+    "vue": "^3.3.4",
+    "vue-router": "^4.2.5",
+    "vuetify": "^3.3.4"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.2.1",
-    "vite": "^6.2.0",
-    "autoprefixer": "^10.4.17",
-    "postcss": "^8.4.35",
-    "tailwindcss": "^3.4.1"
+    "@vitejs/plugin-vue": "^4.4.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.3.6",
+    "vite": "^4.4.11"
   }
 }
