@@ -15,20 +15,26 @@ const drawer = ref(false)
 const isConnected = ref(false)
 const address = ref('')
 const showHero = ref(true)
-const isMobile = display.mobile
+const isMobile = ref(display.mobile)
 const pigAnimation = ref('idle')
 const isDark = useDark()
 const toggleDark = useToggle(isDark)
 
-// Parallax effect
+// 提供值給子元件
+provide('isConnected', isConnected)
+provide('address', address)
+provide('toggleDark', toggleDark)
+provide('isDark', isDark)
+
+// 視差效果
 const target = ref(null)
 const { tilt, roll } = useParallax(target)
 
-// Scroll reveal
+// 滾動顯示效果
 const { y } = useScroll(window)
 const isVisible = ref(false)
 
-// Mouse trail effect
+// 滑鼠軌跡效果
 const mouse = useMouse()
 const particles = ref([])
 const MAX_PARTICLES = 50
@@ -63,8 +69,8 @@ const updateParticles = () => {
   requestAnimationFrame(updateParticles)
 }
 
-// Typing effect
-const text = "Your Smart Piggy Bank for Web3"
+// 打字效果
+const text = "您的智能錢包，Web3 資產管理專家"
 const displayText = ref('')
 let currentIndex = 0
 
@@ -76,11 +82,16 @@ const typeText = () => {
   }
 }
 
-// 添加標題動畫相關的響應式數據
+// 標題動畫相關的響應式數據
 const titleVisible = ref(false)
 
+// 側邊欄控制
+const toggleDrawer = () => {
+  drawer.value = !drawer.value
+}
+
 onMounted(() => {
-  // Initialize Vanta.js background
+  // 初始化 Vanta.js 背景
   if (window.VANTA) {
     window.VANTA.NET({
       el: "#vanta-bg",
@@ -101,12 +112,47 @@ onMounted(() => {
     })
   }
 
-  // Start particle animation
+  // 更新視窗大小時更新移動端狀態
+  window.addEventListener('resize', () => {
+    isMobile.value = display.mobile.value
+  })
+
+  // 開始粒子動畫
   updateParticles()
 
-  // Start typing animation
+  // 開始打字動畫
   typeText()
 
+  // 初始化硬幣動畫
+  anime({
+    targets: '.coin',
+    translateY: function() {
+      return anime.random(-30, 30)
+    },
+    translateX: function() {
+      return anime.random(-30, 30)
+    },
+    rotate: function() {
+      return anime.random(-360, 360)
+    },
+    scale: function() {
+      return anime.random(0.8, 1.2)
+    },
+    duration: function() {
+      return anime.random(1000, 3000)
+    },
+    delay: function() {
+      return anime.random(0, 1000)
+    },
+    loop: true,
+    easing: 'easeInOutQuad'
+  })
+
+  // 監聽來自 WelcomeScreen 的連接錢包事件
+  window.addEventListener('connect-wallet', () => {
+    connectWallet()
+  })
+  
   // 觸發標題動畫
   setTimeout(() => {
     titleVisible.value = true
@@ -114,6 +160,7 @@ onMounted(() => {
   
   return () => {
     window.removeEventListener('connect-wallet', connectWallet)
+    window.removeEventListener('resize', () => {})
   }
 })
 
@@ -131,7 +178,7 @@ const connectWallet = async () => {
     })
     
     // 請求用戶簽名
-    const message = 'Welcome to Pig Vault!\n\nPlease sign this message to connect your wallet.'
+    const message = '歡迎使用 Pig Vault!\n\n請簽署此訊息以連接您的錢包。'
     const signature = await window.ethereum.request({
       method: 'personal_sign',
       params: [message, accounts[0]]
@@ -155,6 +202,16 @@ const connectWallet = async () => {
       duration: 1000,
       easing: 'easeInOutQuad'
     })
+    
+    // 觸發自定義事件，通知其他元件錢包已連接
+    window.dispatchEvent(new CustomEvent('wallet-connected', { 
+      detail: { address: accounts[0] }
+    }))
+    
+    // 導航到主頁（如果不在主頁）
+    if (router.currentRoute.value.path !== '/') {
+      router.push('/')
+    }
   } catch (error) {
     console.error('連接錢包失敗:', error)
     alert('連接錢包失敗: ' + error.message)
@@ -163,26 +220,39 @@ const connectWallet = async () => {
 
 const disconnectWallet = async () => {
   try {
-  isConnected.value = false
-    address.value = null
+    isConnected.value = false
+    address.value = ''
     showHero.value = true
+    
+    // 觸發自定義事件，通知其他元件錢包已斷開連接
+    window.dispatchEvent(new CustomEvent('wallet-disconnected'))
+    
+    // 導航到主頁
+    router.push('/')
   } catch (error) {
     console.error('斷開錢包失敗:', error)
   }
 }
 
 const items = [
-  { title: 'Home', icon: 'mdi-home', to: '/' },
-  { title: 'Vault', icon: 'mdi-wallet', to: '/vault' },
-  { title: 'Earnings', icon: 'mdi-cash', to: '/earnings' },
+  { title: '首頁', icon: 'mdi-home', to: '/' },
+  { title: '保險箱', icon: 'mdi-wallet', to: '/vault' },
+  { title: '收益', icon: 'mdi-cash', to: '/earnings' },
+  { title: '設定', icon: 'mdi-cog', to: '/settings' },
 ]
+
+// 格式化地址顯示
+const formatAddress = (addr) => {
+  if (!addr) return '';
+  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+}
 </script>
 
 <template>
-  <v-app class="app-container" ref="target">
+  <v-app :theme="isDark ? 'dark' : 'light'" class="app-container" ref="target">
     <div id="vanta-bg" class="vanta-background"></div>
     
-    <!-- Particle effect -->
+    <!-- 粒子效果 -->
     <div class="particles">
       <div v-for="(particle, index) in particles" 
            :key="index" 
@@ -197,117 +267,200 @@ const items = [
       </div>
     </div>
 
-    <!-- Main Layout Container -->
-    <div class="layout-wrapper">
-      <div class="layout-container max-w-screen-xl mx-auto px-6">
-        <!-- Navigation -->
-        <v-app-bar flat class="glass-nav px-6">
+    <!-- 側邊欄選單 (移動端) -->
+    <v-navigation-drawer
+      v-model="drawer"
+      temporary
+      :width="280"
+      class="glass-nav-drawer"
+    >
+      <div class="drawer-header py-4 px-4">
         <div class="d-flex align-center">
-            <v-app-bar-title class="brand-title">
+          <v-avatar size="40" class="mr-4 gradient-bg">
+            <span class="text-h6 font-weight-bold">PV</span>
+          </v-avatar>
+          <div class="brand-wrapper">
+            <span class="brand-text">Pig</span>
+            <span class="brand-highlight">Vault</span>
+          </div>
+        </div>
+      </div>
+      
+      <v-divider></v-divider>
+      
+      <v-list class="transparent-bg">
+        <v-list-item
+          v-for="item in items"
+          :key="item.title"
+          :to="item.to"
+          :prepend-icon="item.icon"
+          :active="router.currentRoute.value.path === item.to"
+          class="my-1"
+        >
+          <v-list-item-title>{{ item.title }}</v-list-item-title>
+        </v-list-item>
+
+        <v-divider class="my-3"></v-divider>
+        
+        <v-list-item v-if="isConnected" @click="disconnectWallet" prepend-icon="mdi-logout" class="my-1">
+          <v-list-item-title>登出錢包</v-list-item-title>
+          <v-list-item-subtitle>{{ formatAddress(address) }}</v-list-item-subtitle>
+        </v-list-item>
+        
+        <v-list-item v-else @click="connectWallet" prepend-icon="mdi-wallet" class="my-1">
+          <v-list-item-title>連接錢包</v-list-item-title>
+        </v-list-item>
+        
+        <v-list-item @click="toggleDark()" prepend-icon="mdi-theme-light-dark" class="my-1">
+          <v-list-item-title>{{ isDark ? '淺色模式' : '深色模式' }}</v-list-item-title>
+        </v-list-item>
+      </v-list>
+    </v-navigation-drawer>
+
+    <!-- 主要佈局容器 -->
+    <div class="layout-wrapper">
+      <div class="layout-container max-w-screen-xl mx-auto px-4 px-sm-6">
+        <!-- 導航欄 -->
+        <v-app-bar flat class="glass-nav px-4 px-sm-6">
+          <template v-slot:prepend>
+            <v-app-bar-nav-icon 
+              @click="toggleDrawer" 
+              class="d-flex d-md-none"
+            ></v-app-bar-nav-icon>
+            
+            <v-app-bar-title class="brand-title d-flex align-center">
               <div class="brand-wrapper">
                 <span class="brand-text">Pig</span>
                 <span class="brand-highlight">Vault</span>
                 <div class="brand-underline"></div>
               </div>
             </v-app-bar-title>
-        </div>
+          </template>
           
           <v-spacer></v-spacer>
-      
+          
           <div class="d-none d-md-flex align-center gap-6">
-        <v-btn 
-          v-for="item in items" 
-          :key="item.title" 
-          :to="item.to" 
-          variant="text" 
+            <v-btn 
+              v-for="item in items" 
+              :key="item.title" 
+              :to="item.to" 
+              variant="text" 
               class="nav-btn glow-hover"
-        >
-          {{ item.title }}
-        </v-btn>
-      
-        <v-btn 
-          v-if="!isConnected"
-              class="connect-btn glow-effect"
-          @click="connectWallet"
-        >
-              <v-icon left class="mr-2">mdi-wallet</v-icon>
-          Connect Wallet
-        </v-btn>
-
-        <template v-else>
-              <div class="wallet-display glass-card">
-                <v-icon left class="mr-2" color="var(--neon-primary)">mdi-wallet-outline</v-icon>
-                {{ address.substring(0, 6) }}...{{ address.substring(address.length - 4) }}
-              </div>
-        </template>
-      </div>
-    </v-app-bar>
-    
-        <!-- Hero Section -->
-        <div class="hero-section min-h-screen flex items-center justify-center">
-          <!-- 背景層 -->
-          <div class="background-layer">
-            <div class="enhanced-background">
-              <div class="particles-container">
-                <div v-for="n in 50" :key="n" 
-                     class="particle-dot"
-                     :style="{
-                       '--x': `${Math.random() * 100}%`,
-                       '--y': `${Math.random() * 100}%`,
-                       '--size': `${Math.random() * 3 + 1}px`,
-                       '--speed': `${Math.random() * 20 + 10}s`,
-                       '--delay': `${Math.random() * -20}s`
-                     }">
-                </div>
-              </div>
-              <div class="gradient-overlay"></div>
-            </div>
+              :active="router.currentRoute.value.path === item.to"
+            >
+              {{ item.title }}
+            </v-btn>
           </div>
-
-          <!-- 內容層 -->
-          <div class="content-layer">
-            <div class="hero-content text-center max-w-screen-xl mx-auto px-6">
-              <!-- Main Title Group -->
-              <div class="title-group mb-12">
-                <h1 class="hero-title">
-                  <div class="title-line">
-                    <span class="title-char" v-for="(char, index) in 'Welcome to'"
-                          :key="'welcome-'+index"
-                          :style="{ '--char-delay': `${index * 0.05}s` }">
-                      {{ char }}
-                    </span>
-                  </div>
-                  <div class="title-line highlight" data-text="Pig Vault">
-                    <span class="title-char" v-for="(char, index) in 'Pig Vault'"
-                          :key="'pigvault-'+index"
-                          :style="{ '--char-delay': `${index * 0.05}s` }">
-                      {{ char }}
-                    </span>
-                  </div>
-                </h1>
-                <p class="hero-subtitle">{{ displayText }}</p>
-              </div>
-
-              <v-btn class="connect-btn-hero" @click="connectWallet">
-                <v-icon class="wallet-icon mr-2">mdi-wallet</v-icon>
-                CONNECT WALLET
+          
+          <template v-slot:append>
+            <div class="d-flex align-center gap-2">
+              <v-btn
+                icon
+                variant="text"
+                @click="toggleDark()"
+                class="mode-switch"
+              >
+                <v-icon>{{ isDark ? 'mdi-white-balance-sunny' : 'mdi-moon-waning-crescent' }}</v-icon>
               </v-btn>
+              
+              <v-btn 
+                v-if="!isConnected"
+                class="connect-btn glow-effect d-none d-sm-flex"
+                @click="connectWallet"
+              >
+                <v-icon left class="mr-2">mdi-wallet</v-icon>
+                連接錢包
+              </v-btn>
+
+              <div v-else class="wallet-display glass-card d-none d-sm-flex">
+                <v-icon left class="mr-2" color="var(--neon-primary)">mdi-wallet-outline</v-icon>
+                {{ formatAddress(address) }}
+                <v-btn 
+                  icon 
+                  size="small" 
+                  class="ml-2" 
+                  variant="text" 
+                  @click="disconnectWallet" 
+                  title="登出錢包"
+                >
+                  <v-icon size="small">mdi-logout</v-icon>
+                </v-btn>
+              </div>
+            </div>
+          </template>
+        </v-app-bar>
+
+        <!-- 英雄區域 -->
+        <v-fade-transition>
+          <div v-if="showHero" class="hero-section min-h-screen flex items-center justify-center" 
+               :style="{
+                 '--tilt-x': tilt + 'deg',
+                 '--tilt-y': roll + 'deg'
+               }">
+            <!-- 背景層 -->
+            <div class="background-layer">
+              <div class="enhanced-background">
+                <div class="particles-container">
+                  <div v-for="n in 50" :key="n" 
+                       class="particle-dot"
+                       :style="{
+                         '--x': `${Math.random() * 100}%`,
+                         '--y': `${Math.random() * 100}%`,
+                         '--size': `${Math.random() * 3 + 1}px`,
+                         '--speed': `${Math.random() * 20 + 10}s`,
+                         '--delay': `${Math.random() * -20}s`
+                       }">
+                  </div>
+                </div>
+                <div class="gradient-overlay"></div>
+              </div>
+            </div>
+            
+            <!-- 內容層 -->
+            <div class="content-layer">
+              <div class="hero-content text-center max-w-screen-xl mx-auto px-6">
+                <!-- 主標題組 -->
+                <div class="title-group mb-12">
+                  <h1 class="hero-title">
+                    <div class="title-line">
+                      <span class="title-char" v-for="(char, index) in '歡迎使用'"
+                            :key="'welcome-'+index"
+                            :style="{ '--char-delay': `${index * 0.05}s` }">
+                        {{ char }}
+                      </span>
+                    </div>
+                    <div class="title-line highlight" data-text="Pig Vault">
+                      <span class="title-char" v-for="(char, index) in 'Pig Vault'"
+                            :key="'pigvault-'+index"
+                            :style="{ '--char-delay': `${index * 0.05}s` }">
+                        {{ char }}
+                      </span>
+                    </div>
+                  </h1>
+                  <p class="hero-subtitle">{{ displayText }}</p>
+                </div>
+
+                <v-btn class="connect-btn-hero" @click="connectWallet">
+                  <v-icon class="wallet-icon mr-2">mdi-wallet</v-icon>
+                  連接錢包
+                </v-btn>
+              </div>
             </div>
           </div>
-        </div>
+        </v-fade-transition>
 
-        <!-- Main content -->
-        <v-main v-if="isConnected" class="max-w-screen-xl mx-auto px-6">
-      <v-fade-transition mode="out-in">
-        <router-view/>
-      </v-fade-transition>
-    </v-main>
+        <!-- 主要內容區 -->
+        <v-main class="max-w-screen-xl mx-auto" :class="{ 'pt-0': isConnected && !showHero }">
+          <v-fade-transition mode="out-in">
+            <router-view v-if="isConnected || !showHero"/>
+          </v-fade-transition>
+        </v-main>
       </div>
 
-      <!-- Footer -->
+      <!-- 頁腳 -->
       <footer class="footer-wrapper">
         <div class="glass-footer">
-          <div class="footer-container max-w-screen-xl mx-auto px-6">
+          <div class="footer-container max-w-screen-xl mx-auto px-4 px-sm-6">
             <div class="footer-content">
               <div class="footer-left">
                 <span class="copyright glow-text">&copy; {{ new Date().getFullYear() }} Pig Vault</span>
@@ -323,10 +476,10 @@ const items = [
                 </a>
                 <a href="#" class="footer-link">
                   <v-icon size="20" color="var(--neon-primary)">mdi-file-document-outline</v-icon>
-                  <span>Docs</span>
+                  <span>文件</span>
                 </a>
               </div>
-          </div>
+            </div>
           </div>
         </div>
       </footer>
@@ -355,6 +508,7 @@ html {
   background: var(--bg-primary);
   color: var(--text-primary);
   font-family: 'Space Grotesk', sans-serif;
+  overflow-x: hidden;
 }
 
 .app-container {
@@ -400,6 +554,9 @@ html {
   border: 1px solid var(--glass-border);
   border-radius: 16px;
   transition: all 0.3s ease;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
 }
 
 .glass-card:hover {
@@ -432,6 +589,15 @@ html {
   text-shadow: 0 0 10px var(--neon-primary);
 }
 
+.glow-text-subtle {
+  color: var(--text-primary);
+  text-shadow: 0 0 5px rgba(0, 255, 224, 0.5);
+}
+
+.glow-icon {
+  filter: drop-shadow(0 0 5px var(--neon-primary));
+}
+
 .glow-hover {
   transition: all 0.3s ease;
 }
@@ -439,6 +605,14 @@ html {
 .glow-hover:hover {
   color: var(--neon-primary) !important;
   text-shadow: 0 0 10px var(--neon-primary);
+}
+
+.mode-switch {
+  transition: all 0.3s ease;
+}
+
+.mode-switch:hover .v-icon {
+  transform: rotate(30deg);
 }
 
 .glow-effect {
@@ -665,6 +839,10 @@ html {
   margin-right: auto;
 }
 
+.subtitle-text {
+  color: var(--text-secondary);
+}
+
 .neon-text {
   color: var(--neon-primary);
   text-shadow: 0 0 10px var(--neon-primary);
@@ -702,7 +880,6 @@ html {
 
 /* Wallet display */
 .wallet-display {
-  padding: 8px 16px;
   font-family: 'Space Grotesk', monospace;
   color: var(--neon-primary);
   letter-spacing: 1px;
@@ -762,10 +939,21 @@ html {
 }
 
 /* Responsive */
+@media (max-width: 960px) {
+  .layout-container {
+    padding-bottom: 140px; /* 移動端為頁腳預留更多空間 */
+  }
+  
+  .hero-title {
+    font-size: 3.5rem;
+  }
+}
+
 @media (max-width: 768px) {
   .hero-title {
-    font-size: clamp(3rem, 8vw, 5rem);
-    gap: 1rem;
+    font-size: 2.5rem;
+    flex-direction: column;
+    gap: 0.5rem;
   }
   
   .title-line.highlight {
@@ -779,8 +967,32 @@ html {
     padding: 0 1rem;
   }
   
+  .footer-content {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .footer-right {
+    gap: 1.5rem;
+  }
+
+  .brand-text, .brand-highlight {
+    font-size: 1.5rem;
+  }
+  
   .particle-dot {
     --size: calc(var(--size) * 0.7);
+  }
+}
+
+@media (max-width: 600px) {
+  .hero-title {
+    font-size: 2rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.2rem;
   }
 }
 
