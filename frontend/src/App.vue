@@ -8,6 +8,7 @@ import anime from 'animejs'
 import { useMouse, useParallax } from '@vueuse/core'
 import { useDark, useToggle } from '@vueuse/core'
 import { useScroll } from '@vueuse/core'
+import ParticleBackground from './components/ParticleBackground.vue'
 
 const router = useRouter()
 const display = useDisplay()
@@ -95,7 +96,7 @@ const updateParticles = () => {
 }
 
 // 打字效果
-const text = "您的智能錢包，Web3 資產管理專家"
+const text = "Your Smart Wallet, Web3 Asset Management Expert"
 const displayText = ref('')
 let currentIndex = 0
 
@@ -263,10 +264,10 @@ const disconnectWallet = async () => {
 }
 
 const items = [
-  { title: '首頁', icon: 'mdi-home', to: '/' },
-  { title: '保險箱', icon: 'mdi-wallet', to: '/vault' },
-  { title: '收益', icon: 'mdi-cash', to: '/earnings' },
-  { title: '設定', icon: 'mdi-cog', to: '/settings' },
+  { title: 'Home', icon: 'mdi-home', to: '/' },
+  { title: 'Vault', icon: 'mdi-wallet', to: '/vault' },
+  { title: 'Earnings', icon: 'mdi-cash', to: '/earnings' },
+  { title: 'Settings', icon: 'mdi-cog', to: '/settings' },
 ]
 
 // 格式化地址顯示
@@ -278,7 +279,10 @@ const formatAddress = (addr) => {
 
 <template>
   <v-app :theme="isDark ? 'dark' : 'light'" class="app-container" ref="target">
-    <div id="vanta-bg" class="vanta-background"></div>
+    <!-- 將 ParticleBackground 移到這裡，確保它在最底層 -->
+    <div class="background-wrapper">
+      <ParticleBackground />
+    </div>
     
     <!-- 粒子效果 -->
     <div class="particles">
@@ -397,7 +401,7 @@ const formatAddress = (addr) => {
                 @click="connectWallet"
               >
                 <v-icon left class="mr-2">mdi-wallet</v-icon>
-                連接錢包
+                Connect Wallet
               </v-btn>
 
               <div v-else class="wallet-display glass-card d-none d-sm-flex">
@@ -432,7 +436,7 @@ const formatAddress = (addr) => {
                 <div class="title-group mb-12">
                   <h1 class="hero-title">
                     <div class="title-line">
-                      <span class="title-char" v-for="(char, index) in '歡迎使用'"
+                      <span class="title-char" v-for="(char, index) in 'Welcome'"
                             :key="'welcome-'+index"
                             :style="{ '--char-delay': `${index * 0.05}s` }">
                         {{ char }}
@@ -451,7 +455,7 @@ const formatAddress = (addr) => {
 
                 <v-btn class="connect-btn-hero" @click="connectWallet">
                   <v-icon class="wallet-icon mr-2">mdi-wallet</v-icon>
-                  連接錢包
+                  Connect Wallet
                 </v-btn>
               </div>
             </div>
@@ -541,8 +545,21 @@ html {
 
 .app-container {
   background: transparent !important;
-  perspective: 1000px;
-  transform-style: preserve-3d;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 添加背景包裝器樣式 */
+.background-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
 }
 
 /* Background effects */
@@ -1288,8 +1305,8 @@ html {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   z-index: -2;
   pointer-events: none;
   overflow: hidden;
@@ -1300,10 +1317,9 @@ html {
   position: relative;
   z-index: 10;
   background: transparent;
-  margin-top: 72px; /* 導航欄高度 */
-  min-height: calc(100vh - 172px); /* 視窗高度減去導航欄和頁腳高度 */
   width: 100%;
   padding: 0;
+  flex-grow: 1;
 }
 
 /* 確保路由視圖內容正確顯示 */
