@@ -7,9 +7,9 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT 
 const INCH_API_KEY = process.env.INCH_API_KEY;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
+const FRONTEND_URL = process.env.FRONTEND_URL 
 
 // 全局配置
 const CONFIG = {
@@ -107,7 +107,7 @@ app.get('/api/health', (req, res) => {
 async function getTokenDetails(chainId, contractAddress) {
   if (!contractAddress) return null;
   
-  // 跳過原生代幣地址
+  // 跳過原生代幣地址(因為有BUG)
   if (contractAddress.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
     return {
       symbol: 'ETH',
@@ -161,29 +161,25 @@ async function getTokenPrice(chainId, tokenAddress) {
   }
   
   try {
-    const baseUrl = 'https://api.1inch.dev/token-details/v1.0/charts/range';
+    const baseUrl = 'https://api.1inch.dev/token-details/v1.0/charts/interval';
     const url = `${baseUrl}/${chainId}/${tokenAddress}`;
-    
-    const now = Math.floor(Date.now() / 1000);
-    const oneDayAgo = now - 86400; // 24小時前
     
     const config = {
       headers: {
         "Authorization": `Bearer ${INCH_API_KEY}`
       },
       params: {
-        from: oneDayAgo,
-        to: now
+        interval: '1d' // 使用1天間隔
       }
     };
     
-    const response = await apiRequest(url, config, 'Token Price');
+    const response = await apiRequest(url, config);
     
     // 提取最新價格
     let latestPrice = null;
-    if (response.data && response.data.length > 0) {
-      const latestDataPoint = response.data[response.data.length - 1];
-      latestPrice = latestDataPoint.close;
+    if (response.data && response.data.d && response.data.d.length > 0) {
+      const latestDataPoint = response.data.d[response.data.d.length - 1];
+      latestPrice = latestDataPoint.c; // 使用收盤價
     }
     
     const priceData = { 
@@ -278,41 +274,6 @@ async function getBatchTokenDetails(chainId, tokenAddresses) {
   }
 }
 
-// 代幣價格 API 端點
-app.get('/api/token-price/:chain/:address', async (req, res) => {
-  try {
-    const { chain, address } = req.params;
-    
-    if (!chain || !address) {
-      return res.status(400).json({
-        error: 'Missing required parameters',
-        message: 'Chain and token address are required'
-      });
-    }
-    
-    const priceData = await getTokenPrice(chain, address);
-    
-    if (priceData.error) {
-      return res.status(500).json({
-        error: 'Failed to fetch token price',
-        message: priceData.error
-      });
-    }
-    
-    res.status(200).json(priceData);
-  } catch (error) {
-    console.error('API proxy error:', error.message);
-    
-    const status = error.response?.status || 500;
-    const message = error.response?.data?.message || error.message || 'Unknown error';
-    
-    res.status(status).json({
-      error: 'Failed to fetch token price',
-      message: message
-    });
-  }
-});
-
 // 錢包代幣餘額 API 端點
 app.get('/api/tokens/:chain/:address', async (req, res) => {
   try {
@@ -353,11 +314,13 @@ app.get('/api/tokens/:chain/:address', async (req, res) => {
         const name = tokenDetails.name || 'Unknown Token';
         const decimals = tokenDetails.decimals || 18;
         
-        let tokenValue = 0;
-        if (tokenDetails.price !== undefined) {
-          const balanceInTokens = parseFloat(balance) / (10 ** decimals);
-          tokenValue = balanceInTokens * tokenDetails.price;
-        }
+        // 獲取代幣價格
+        const priceData = await getTokenPrice(chain, tokenAddress);
+        const price = priceData?.price || 0;
+        
+        // 計算代幣價值
+        const balanceInTokens = parseFloat(balance) / (10 ** decimals);
+        const tokenValue = balanceInTokens * price;
         
         tokens[tokenAddress] = {
           address: tokenAddress,
@@ -365,6 +328,7 @@ app.get('/api/tokens/:chain/:address', async (req, res) => {
           name: name,
           balance: balance,
           decimals: decimals,
+          price: price,
           value: tokenValue,
           logoURI: tokenDetails.logoURI || '',
           details: tokenDetails
@@ -376,6 +340,7 @@ app.get('/api/tokens/:chain/:address', async (req, res) => {
           name: 'Unknown Token',
           balance: balance,
           decimals: 18,
+          price: 0,
           value: 0,
           details: null
         };

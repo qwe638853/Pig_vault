@@ -206,8 +206,7 @@
         </v-col>
       </v-row>
 
-      <!-- 未連接錢包時顯示歡迎畫面 -->
-      <welcome-screen v-else-if="!isConnected"></welcome-screen>
+
     </v-container>
 
     <!-- 代幣詳細信息對話框 -->
