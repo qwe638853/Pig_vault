@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const dotenv = require('dotenv');
+const bodyParser = require('body-parser');
 
 // Load environment variables
 dotenv.config();
@@ -41,6 +42,7 @@ app.use(cors({
 
 // Middleware
 app.use(express.json());
+app.use(bodyParser.json());
 
 // 緩存
 const caches = {
@@ -361,6 +363,20 @@ app.get('/api/tokens/:chain/:address', async (req, res) => {
     });
   }
 });
+
+// MultiBaas Webhook 接收器
+app.post('/webhook', (req, res) => {
+  console.log('Webhook 收到事件：', req.body);
+  
+  // 保留原有的日志输出
+  console.log("📩 收到 MultiBaas Webhook 通知：", req.body);
+
+  // TODO：这里你可以根据 req.body 里的事件内容去做后续处理
+  // 例如储存纪录、计算利息、更新资料库等等
+
+  res.status(200).send('Webhook received!');
+});
+
 
 // Start server
 app.listen(PORT, () => {
