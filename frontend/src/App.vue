@@ -267,6 +267,7 @@ const items = [
   { title: 'Home', icon: 'mdi-home', to: '/' },
   { title: 'Vault', icon: 'mdi-wallet', to: '/vault' },
   { title: 'Earnings', icon: 'mdi-cash', to: '/earnings' },
+  { title: 'Circle Test', icon: 'mdi-test-tube', to: '/circle-test' },
   { title: 'Settings', icon: 'mdi-cog', to: '/settings' },
 ]
 

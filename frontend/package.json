@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@circle-fin/modular-wallets-core": "^1.0.4",
     "@mdi/font": "^7.4.47",
     "@vueuse/core": "^10.7.0",
     "@vueuse/motion": "^2.0.0",
