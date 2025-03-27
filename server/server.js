@@ -3,14 +3,16 @@ const cors = require('cors');
 const axios = require('axios');
 const dotenv = require('dotenv');
 const bodyParser = require('body-parser');
+const crypto = require('crypto'); // 添加 crypto 模組，用於 HMAC-SHA256 簽名
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT 
+const PORT = process.env.PORT; 
 const INCH_API_KEY = process.env.INCH_API_KEY;
-const FRONTEND_URL = process.env.FRONTEND_URL 
+const FRONTEND_URL = process.env.FRONTEND_URL;
+const MULTIBAAS_SECRET_KEY = process.env.MULTIBAAS_SECRET_KEY; // 從環境變數中獲取 MultiBaas 秘密鍵
 
 // 全局配置
 const CONFIG = {
@@ -32,7 +34,7 @@ const CONFIG = {
     BATCH_DELAY: 500        // 批次間延遲(毫秒) 
   }
 };
-
+app.use('/webhook', express.raw({ type: '*/*' })); //設定webhook，針對 /webhook 保留 raw body
 // CORS setup
 app.use(cors({
   origin: FRONTEND_URL,
@@ -364,17 +366,55 @@ app.get('/api/tokens/:chain/:address', async (req, res) => {
   }
 });
 
+// 驗證 MultiBaas Webhook 簽名
+function verifyWebhookSignature(req) {
+  const signature = req.headers['x-multibaas-signature'];
+  const timestamp = req.headers['x-multibaas-timestamp'];
+  const body = req.body.toString('utf8'); 
+
+  // 檢查頭部是否存在
+  if (!signature || !timestamp) {
+    throw new Error('缺少簽名或時間戳頭部');
+  }
+
+  // 檢查秘密鍵是否存在
+  if (!MULTIBAAS_SECRET_KEY) {
+    throw new Error('未配置 MULTIBAAS_SECRET_KEY 環境變數');
+  }
+
+  // 生成預期的 HMAC 簽名
+  const hmac = crypto.createHmac('sha256', MULTIBAAS_SECRET_KEY);
+  hmac.update(body + timestamp);
+  const expectedSignature = hmac.digest('hex');
+
+  // 比較簽名
+  if (expectedSignature !== signature) {
+    throw new Error('簽名驗證失敗');
+  }
+
+  // 可選：檢查時間戳是否過期（例如 5 分鐘）
+  const currentTime = Math.floor(Date.now() / 1000); // 當前時間（秒）
+  const timestampNum = parseInt(timestamp, 10);
+  if (Math.abs(currentTime - timestampNum) > 300) {
+    throw new Error('時間戳過期');
+  }
+
+  return true;
+}
+
 // MultiBaas Webhook 接收器
 app.post('/webhook', (req, res) => {
-  console.log('Webhook 收到事件：', req.body);
-  
-  // 保留原有的日志输出
-  console.log("📩 收到 MultiBaas Webhook 通知：", req.body);
+  try {
+    verifyWebhookSignature(req);
+    const eventData = JSON.parse(req.body.toString('utf8'));
+    console.log('✅ Webhook 簽名驗證成功');
+    console.dir(eventData, { depth: null });
 
-  // TODO：这里你可以根据 req.body 里的事件内容去做后续处理
-  // 例如储存纪录、计算利息、更新资料库等等
-
-  res.status(200).send('Webhook received!');
+    res.status(200).send('Webhook received and validated!');
+  } catch (error) {
+    console.error('❌ Webhook 驗證失敗：', error.message);
+    res.status(400).send(`Webhook 驗證失敗：${error.message}`);
+  }
 });
 
 
@@ -382,4 +422,4 @@ app.post('/webhook', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
   console.log(`Allowing CORS requests from ${FRONTEND_URL}`);
-}); 
+});
