@@ -12,9 +12,10 @@ Small token management system to help users find and manage small tokens in thei
 ## Project Structure
 
 ```
-pig-vault/
-├── frontend/          # Vue 3 frontend
-└── server/            # Express backend
+Pig_vault/
+├── frontend/     # Vue 3 frontend
+├── hardhat/      # Hardhat smart contracts
+└── server/       # Express backend
 ```
 
 ## Getting Started
