@@ -72,8 +72,8 @@ export default {
             }
           }
 
-          this.x += Math.random() * 1 - 0.5;
-          this.y += Math.random() * 1 - 0.5;
+          this.x += Math.random() * 2 - 1.5;
+          this.y += Math.random() * 2 - 1.5;
 
           let dx = this.x - this.baseX;
           let dy = this.y - this.baseY;
@@ -124,16 +124,16 @@ export default {
 
           const centerX = Math.floor((canvas.width / dpr - imageWidth) / 2);
           const centerY = Math.floor((canvas.height / dpr - imageHeight) / 2);
-
-          const particleGap = 2;
+// 粒子距離
+          const particleGap = 5;
           for (let y = 0; y < imageHeight; y += particleGap) {
             for (let x = 0; x < imageWidth; x += particleGap) {
               const i = (y * imageWidth + x) * 4;
               const alpha = data[i + 3];
 
               if (alpha > 128) {
-                particleArray.push(
-                  new Particle(centerX + x, centerY + y, 'white', 1.5)
+                particleArray.push( //粒子大小
+                  new Particle(centerX + x, centerY + y, 'white', 3)
                 );
               }
               if (particleArray.length > 10000) break;

@@ -364,7 +364,6 @@ const formatAddress = (addr) => {
               <div class="brand-wrapper">
                 <span class="brand-text">Pig</span>
                 <span class="brand-highlight">Vault</span>
-                <div class="brand-underline"></div>
               </div>
             </v-app-bar-title>
           </template>
@@ -377,8 +376,8 @@ const formatAddress = (addr) => {
               :key="item.title" 
               :to="item.to" 
               variant="text" 
-              class="nav-btn glow-hover"
-              :active="router.currentRoute.value.path === item.to"
+              class="nav-btn"
+              :class="{ 'router-link-active': $route.path === item.to }"
             >
               {{ item.title }}
             </v-btn>
@@ -400,73 +399,60 @@ const formatAddress = (addr) => {
                 class="connect-btn glow-effect d-none d-sm-flex"
                 @click="connectWallet"
               >
-                <v-icon left class="mr-2">mdi-wallet</v-icon>
                 Connect Wallet
               </v-btn>
-
-              <div v-else class="wallet-display glass-card d-none d-sm-flex">
-                <v-icon left class="mr-2" color="var(--neon-primary)">mdi-wallet-outline</v-icon>
-                {{ formatAddress(address) }}
-                <v-btn 
-                  icon 
-                  size="small" 
-                  class="ml-2" 
-                  variant="text" 
-                  @click="disconnectWallet" 
-                  title="登出錢包"
-                >
-                  <v-icon size="small">mdi-logout</v-icon>
-                </v-btn>
-              </div>
             </div>
           </template>
         </v-app-bar>
 
-        <!-- 英雄區域 -->
-        <v-fade-transition>
-          <div v-if="showHero" class="hero-section min-h-screen flex items-center justify-center" 
-               :style="{
-                 '--tilt-x': tilt + 'deg',
-                 '--tilt-y': roll + 'deg'
-               }">
-            <!-- 內容層 -->
-            <div class="content-layer">
-              <div class="hero-content text-center max-w-screen-xl mx-auto px-6">
-                <!-- 主標題組 -->
-                <div class="title-group mb-12">
-                  <h1 class="hero-title">
-                    <div class="title-line">
-                      <span class="title-char" v-for="(char, index) in 'Welcome'"
-                            :key="'welcome-'+index"
-                            :style="{ '--char-delay': `${index * 0.05}s` }">
-                        {{ char }}
-                      </span>
-                    </div>
-                    <div class="title-line highlight" data-text="Pig Vault">
-                      <span class="title-char" v-for="(char, index) in 'Pig Vault'"
-                            :key="'pigvault-'+index"
-                            :style="{ '--char-delay': `${index * 0.05}s` }">
-                        {{ char }}
-                      </span>
-                    </div>
-                  </h1>
-                  <p class="hero-subtitle">{{ displayText }}</p>
-                </div>
+        <!-- 主要內容區 -->
+        <v-main>
+          <!-- 背景粒子效果 -->
+          <ParticleBackground class="particle-background" />
 
-                <v-btn class="connect-btn-hero" @click="connectWallet">
-                  <v-icon class="wallet-icon mr-2">mdi-wallet</v-icon>
-                  Connect Wallet
-                </v-btn>
+          <!-- 首頁內容 -->
+          <div v-if="!isConnected" class="hero-container">
+            <div class="hero-content" v-motion
+              :initial="{ opacity: 0, y: 50 }"
+              :enter="{ opacity: 1, y: 0 }"
+              :delay="200">
+              
+              <!-- 主標題 -->
+              <div class="title-wrapper" v-motion
+                :initial="{ opacity: 0, scale: 0.8 }"
+                :enter="{ opacity: 1, scale: 1 }"
+                :delay="500">
+                <h1 class="main-title">
+                  <span class="title-line">Welcome to</span>
+                  <span class="highlight-line">PigVault</span>
+                </h1>
               </div>
+
+              <!-- 副標題 -->
+              <p class="hero-subtitle" v-motion
+                :initial="{ opacity: 0 }"
+                :enter="{ opacity: 1 }"
+                :delay="800">
+                Your Smart Wallet, Web3 Asset Management Expert
+              </p>
+
+              <!-- 連接按鈕 -->
+              <v-btn
+                class="connect-wallet-btn"
+                size="x-large"
+                v-motion
+                :initial="{ opacity: 0, y: 20 }"
+                :enter="{ opacity: 1, y: 0 }"
+                :delay="1000"
+                @click="connectWallet"
+              >
+                CONNECT WALLET
+              </v-btn>
             </div>
           </div>
-        </v-fade-transition>
 
-        <!-- 主要內容區 -->
-        <v-main class="main-content max-w-screen-xl mx-auto" :class="{ 'pt-0': isConnected && !showHero }">
-          <v-fade-transition mode="out-in">
-            <router-view v-if="isConnected || !showHero"/>
-          </v-fade-transition>
+          <!-- 路由視圖 -->
+          <router-view v-else></router-view>
         </v-main>
 
         <!-- 全域背景層 -->
@@ -492,7 +478,7 @@ const formatAddress = (addr) => {
       <!-- 頁腳 -->
       <footer class="footer-wrapper">
         <div class="glass-footer">
-          <div class="footer-container max-w-screen-xl mx-auto px-4 px-sm-6">
+          <div class="footer-container max-w-screen-xl mx-auto">
             <div class="footer-content">
               <div class="footer-left">
                 <span class="copyright glow-text">&copy; {{ new Date().getFullYear() }} Pig Vault</span>
@@ -508,7 +494,7 @@ const formatAddress = (addr) => {
                 </a>
                 <a href="#" class="footer-link">
                   <v-icon size="20" color="var(--neon-primary)">mdi-file-document-outline</v-icon>
-                  <span>文件</span>
+                  <span>document</span>
                 </a>
               </div>
             </div>
@@ -524,11 +510,12 @@ const formatAddress = (addr) => {
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --neon-primary: #00ffe0;
-  --neon-secondary: #ff3cbf;
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #1a1a1a;
-  --text-primary: #ffffff;
+   --neon-primary: #00D4FF;
+  --neon-secondary: #1E3A8A;
+  --bg-primary: #0F172A;
+  --bg-secondary: #1E293B;
+  --text-primary: #FFFFFF;
+  --text-secondary: #E2E8F0;
   --text-secondary: rgba(255, 255, 255, 0.7);
   --glass-bg: rgba(255, 255, 255, 0.03);
   --glass-border: rgba(255, 255, 255, 0.05);
@@ -697,237 +684,137 @@ html {
 }
 
 /* Hero section */
-.hero-section {
-  padding: 72px 0;
+.hero-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
   position: relative;
-  overflow: hidden;
-  transform-style: preserve-3d;
-  transform: 
-    perspective(1000px)
-    rotateX(calc(var(--tilt-y) * 0.5deg))
-    rotateY(calc(var(--tilt-x) * 0.5deg));
+  z-index: 1;
 }
 
 .hero-content {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 0 24px;
+  max-width: 1200px;
+  text-align: center;
+  padding: 2rem;
 }
 
-.pig-container {
-  width: 240px;
-  height: 240px;
-  margin: 0 auto;
-  position: relative;
-  z-index: 2;
+.title-wrapper {
+  margin-bottom: 2rem;
 }
 
-.pig-animation {
-  width: 100%;
-  height: 100%;
-  filter: drop-shadow(0 0 30px var(--neon-primary));
-}
-
-.coins-shower {
-  position: absolute;
-  top: -50px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 300px;
-  height: 400px;
-  pointer-events: none;
-}
-
-.coin-wrapper {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(var(--x-pos));
-  animation: coinFall 2s var(--delay) infinite;
-}
-
-.coin {
-  width: 30px;
-  height: 30px;
-  background: linear-gradient(135deg, #ffd700, #ffa500);
-  border-radius: 50%;
-  position: relative;
-  animation: coinSpin 1s linear infinite;
-}
-
-.coin::after {
-  content: '$';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #b8860b;
-  font-weight: bold;
-  text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
-}
-
-@keyframes coinFall {
-  0% {
-    transform: translateY(-50px) translateX(var(--x-pos));
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  60% {
-    transform: translateY(200px) translateX(calc(var(--x-pos) + 20px));
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(300px) translateX(calc(var(--x-pos) + 30px));
-    opacity: 0;
-  }
-}
-
-@keyframes coinSpin {
-  from { transform: rotateY(0deg); }
-  to { transform: rotateY(360deg); }
-}
-
-.hero-title {
+.main-title {
   font-family: 'Sora', sans-serif;
-  font-size: clamp(4rem, 10vw, 8rem);
-  font-weight: 800;
+  font-size: 120px;
+  font-weight: 700;
   line-height: 1.2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.5rem;
-  margin-bottom: 2.5rem;
-  color: #ffffff;
+  margin-bottom: 1rem;
+}
+
+/* 這裡改Welcome */
+
+.title-line {  
+  display: block;
+  color:rgb(255, 255, 255);
+  font-size: 50px;
+  margin-bottom: 1rem;
   text-shadow: 
-    0 0 10px rgba(0, 255, 224, 0.1),
-    0 2px 4px rgba(0, 0, 0, 0.3);
-  text-rendering: geometricPrecision;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.02em;
+    0 0 10px rgba(0, 212, 255, 0.5),
+    0 0 20px rgba(0, 212, 255, 0.2);
 }
 
-.title-line {
-  display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-  overflow: visible;
-  padding: 0.5rem 0;
-}
 
-.title-line.highlight {
-  background: linear-gradient(135deg,
-    rgb(255, 255, 255) 0%,
-    rgb(0, 255, 224) 100%
-  );
+
+/* 這裡改PigVault */
+
+.highlight-line {
+  display: block;
+  background: linear-gradient(135deg, #9370DB, #00BFFF);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  position: relative;
-  text-shadow: 
-    0 0 10px rgba(0, 255, 224, 0.2),
-    0 2px 4px rgba(0, 0, 0, 0.3);
-  text-rendering: geometricPrecision;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  letter-spacing: -0.02em;
-  font-weight: 800;
-}
-
-.title-line.highlight::after {
-  content: attr(data-text);
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg,
-    rgba(255, 255, 255, 0.95) 0%,
-    rgba(0, 255, 224, 0.95) 100%
-  );
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: blur(2px);
-  opacity: 0.3;
-  z-index: -1;
-}
-
-.title-char {
-  display: inline-block;
-  opacity: 0;
-  transform: translateY(50px);
-  animation: charReveal 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  animation-delay: var(--char-delay);
-  text-rendering: geometricPrecision;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  will-change: transform, opacity;
-  backface-visibility: hidden;
-  transform-style: preserve-3d;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.hero-subtitle {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: clamp(1.25rem, 2vw, 1.75rem);
-  color: rgba(255, 255, 255, 0.95);
-  margin-bottom: 3rem;
-  text-shadow: 
-    0 0 20px rgba(0, 255, 224, 0.3),
-    0 2px 4px rgba(0, 0, 0, 0.8);
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.subtitle-text {
-  color: var(--text-secondary);
-}
-
-.neon-text {
-  color: var(--neon-primary);
-  text-shadow: 0 0 10px var(--neon-primary);
-}
-
-.connect-btn-hero {
-  position: relative;
-  z-index: 20;
-  background: rgba(0, 255, 224, 0.1) !important;
-  border: 1px solid rgba(0, 255, 224, 0.5) !important;
-  color: #ffffff !important;
-  font-family: 'Space Grotesk', sans-serif;
-  font-weight: 600;
-  letter-spacing: 2px;
-  height: 56px;
-  min-width: 240px;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  backdrop-filter: blur(5px);
-  box-shadow: 0 0 20px rgba(0, 255, 224, 0.1);
-}
-
-.connect-btn-hero:hover {
-  background: rgba(0, 255, 224, 0.2) !important;
-  border-color: rgba(0, 255, 224, 0.8) !important;
-  transform: scale(1.05) translateY(-2px);
-  box-shadow: 
-    0 0 30px rgba(0, 255, 224, 0.2),
-    inset 0 0 15px rgba(0, 255, 224, 0.1);
-}
-
-.connect-btn-hero:active {
-  transform: scale(0.98);
-  box-shadow: inset 0 0 20px rgba(0, 255, 224, 0.2);
-}
-
-/* Wallet display */
-.wallet-display {
-  font-family: 'Space Grotesk', monospace;
-  color: var(--neon-primary);
+  font-size: 80px; /* 從 100px 減小到 80px */
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 700;
   letter-spacing: 1px;
+  text-shadow: 0 0 10px rgba(0, 191, 255, 0.8), 0 0 2px rgba(0, 191, 255, 0.6), 0 0 30px rgba(147, 112, 219, 0.4);
+  animation: glow 3s ease-in-out infinite;
+}
+
+/* 這裡改底下小字 */
+.hero-subtitle {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 300;
+  font-size: 2rem;
+  color: #D3D3D3;
+  letter-spacing: 2px;
+  animation: fadeIn 1s ease-in forwards;
+}
+
+/* Connect Wallet 按鈕樣式 */
+.connect-wallet-btn {
+  min-width: 200px !important;
+  height: 56px !important;
+  font-family: 'Sora', sans-serif;
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: 2px;
+  background: linear-gradient(to right, var(--neon-primary), var(--neon-secondary)) !important;
+  color: white !important;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+}
+
+.connect-wallet-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 212, 255, 0.4);
+}
+
+/* 響應式設計 */
+@media (max-width: 1200px) {
+  .main-title {
+    font-size: 100px;
+  }
+  .title-line {
+    font-size: 60px;
+  }
+  .highlight-line {
+    font-size: 100px;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-title {
+    font-size: 80px;
+  }
+  .title-line {
+    font-size: 40px;
+  }
+  .highlight-line {
+    font-size: 80px;
+  }
+  .hero-subtitle {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-title {
+    font-size: 60px;
+  }
+  .title-line {
+    font-size: 30px;
+  }
+  .highlight-line {
+    font-size: 60px;
+  }
+  .hero-subtitle {
+    font-size: 18px;
+  }
+  .connect-wallet-btn {
+    min-width: 180px !important;
+  }
 }
 
 /* Footer */
@@ -957,6 +844,7 @@ html {
 }
 
 .footer-right {
+  margin-right: 2rem; /* 往左移動 */
   display: flex;
   gap: 2rem;
 }
@@ -1146,7 +1034,8 @@ html {
 }
 
 .glass-footer {
-  background: rgba(10, 10, 10, 0.9) !important;
+  background: transparent !important;
+  backdrop-filter: none;
   backdrop-filter: blur(10px);
   border-top: 1px solid var(--glass-border);
   padding: 24px 0;
